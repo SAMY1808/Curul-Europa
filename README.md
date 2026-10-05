@@ -10,7 +10,7 @@ Ministros, comunidades autónomas, ayuntamientos, Unión Europea) funcionan con 
 Es una PWA: se puede instalar y jugar sin conexión.
 
 > La versión anterior, que cubría los 27 países de la UE, el Reino Unido y los candidatos, vive en la rama
-> [`europa-v1`](../../tree/europa-v1). Esta versión se concentra en España.
+> [`europa-v1`](https://github.com/SAMY1808/Curul-Europa/tree/europa-v1). Esta versión se concentra en España.
 
 ## Qué hay
 
