@@ -1,6 +1,6 @@
 /* Unión Europea: Parlamento Europeo, Comisión, Consejo (mayoría cualificada y unanimidad), Consejo Europeo,
    transposición de directivas, ampliación, salida de miembros y relación del Reino Unido. */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
   const U = C.U;
   const D = () => C.DATA;
@@ -17,6 +17,7 @@ window.EUROPA = window.EUROPA || {};
       // Los agrarios y regionalistas se afilian al grupo más cercano
       for (const pid in E.partidos) {
         const pa = E.partidos[pid];
+        if (pa.pais === 'ES') continue;          // los grupos europeos de los partidos españoles están fijados en los datos
         if (pa.arq === 'ext') pa.grupo = ([...pa.id].reduce((h, ch) => h + ch.charCodeAt(0), 0) % 3 === 0) ? 'ANR' : 'PAT';
         else if (pa.arq === 'pop') pa.grupo = pa.eu < -42 ? 'PAT' : 'NI';
         else if (pa.arq === 'agr' || pa.arq === 'reg') {
@@ -43,11 +44,11 @@ window.EUROPA = window.EUROPA || {};
           const p = E.partidos[pid];
           const gob = P.gob && P.gob.coalicion.includes(pid);
           const prot = ['pop', 'ext', 'nac'].includes(p.arq) ? 1.04 : 1;
-          crudo[pid] = p.pop * Math.exp(U.gauss(0, 0.11)) * (gob ? 0.9 : 1) * prot;
+          crudo[pid] = (c === 'ES' ? (p.popN || p.pop) : p.pop) * Math.exp(U.gauss(0, 0.11)) * (gob ? 0.9 : 1) * prot;
         });
         const tot = U.suma(Object.values(crudo)), v = {};
         for (const k in crudo) v[k] = crudo[k] * 100 / tot;
-        const elegibles = Object.keys(v).filter(k => v[k] >= Math.min(d.um, 4));
+        const elegibles = Object.keys(v).filter(k => v[k] >= (c === 'ES' ? 0.4 : Math.min(d.um, 4)));
         const w = {}; (elegibles.length ? elegibles : Object.keys(v)).forEach(k => w[k] = v[k]);
         const esc = C.Elecciones.divisores(w, n, false);
         porPais[c] = {};
@@ -321,6 +322,13 @@ window.EUROPA = window.EUROPA || {};
       if (E.jugador && E.jugador.pais === id) C.Eventos.info(E, '🗳️ Resultado del referéndum europeo', txt + (miembro ? (si ? ' El país seguirá siendo miembro.' : ' El país abandona la Unión.') : (si ? ' Se abre el camino a la adhesión.' : ' Se aleja la adhesión.')));
     },
 
+    /* Fondos europeos (Next Generation, cohesión): inversión que empuja el crecimiento y mejora la relación con Bruselas. */
+    fondos(E) {
+      const P = E.paises.ES; P.ue.rel = clamp(P.ue.rel + 1, 0, 100);
+      C.Economia.aplicar(E, 'ES', { crec: 0.04 });
+      E.ue.fondosTotal = (E.ue.fondosTotal || 0) + 1;
+    },
+
     /* ── Ciclo semanal ── */
     turno(E) {
       const J = E.jugador, ue = E.ue;
@@ -359,7 +367,7 @@ window.EUROPA = window.EUROPA || {};
 
     ministroDelSector(E, e) {
       const J = E.jugador; if (J.cargo !== 'ministro') return false;
-      const m = D().ministerios.find(x => x.id === J.ministerio); return !!m && (m.sector === e.s || m.id === 'eur');
+      const m = D().ministerios.find(x => x.id === J.ministerio); return !!m && (m.sector === e.s || m.id === 'ext');
     },
 
     celebrarPE(E) {
@@ -463,18 +471,6 @@ window.EUROPA = window.EUROPA || {};
       return { ok: true, msg: `Tu ponencia mueve a la Eurocámara ${signo > 0 ? 'a favor' : 'en contra'} de «${e.t}».` };
     }
   });
-  A('dialogo_ue', {
-    nombre: 'Diálogo con Bruselas', icono: '🤝', costo: 2, grupo: 'europa', desc: 'Para países fuera de la UE: mejora la relación y el avance hacia la adhesión.',
-    disponible(E) { const s = E.paises[E.jugador.pais].estado; return s === 'ue' ? 'Tu país ya es miembro' : (E.jugador.cargo === 'activista' ? 'Necesitas un cargo' : true); },
-    ejecutar(E) {
-      const P = E.paises[E.jugador.pais], x = f(E, 'negociacion', 'gestion');
-      const fat = E.jugador.fatiga || 1;
-      P.ue.rel = clamp(P.ue.rel + (0.5 + 0.5 * x) * fat, 0, 100);
-      if (P.estado === 'candidato') P.ue.progreso = Math.min(99, P.ue.progreso + (0.06 + 0.06 * x) * fat);
-      C.Personaje.cambiar(E, { capEU: 3, prestigio: 1 });
-      return { ok: true, msg: 'Las conversaciones con la Comisión avanzan.' };
-    }
-  });
   A('proponer_exp', {
     nombre: 'Proponer un texto a la Comisión', icono: '🇪🇺', costo: 2, grupo: 'europa', desc: 'Sólo comisarios: impulsa un expediente de tu cartera.',
     disponible(E) { return E.jugador.cargo === 'comisario' ? true : 'Sólo comisarios/as'; },
@@ -509,4 +505,4 @@ window.EUROPA = window.EUROPA || {};
 
   C.UE = UE;
   C.Tiempo.registrar('ue', UE, 40);
-})(window.EUROPA);
+})(window.ESP);

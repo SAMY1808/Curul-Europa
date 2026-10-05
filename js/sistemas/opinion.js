@@ -1,5 +1,5 @@
 /* Opinión: aprobación de los gobiernos, popularidad de los partidos y encuestas. */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
   const U = C.U;
 
@@ -11,6 +11,7 @@ window.EUROPA = window.EUROPA || {};
       }
     },
     postInit(E) {
+      if (E.esp) E.esp.sumaNac = U.suma(E.esp.nacionales.map(k => E.partidos[k].pop));
       for (const id in E.paises) {
         const P = E.paises[id];
         if (P.gob && P.gob.aprob === undefined) P.gob.aprob = 40 + U.gauss(0, 8);
@@ -28,6 +29,7 @@ window.EUROPA = window.EUROPA || {};
           g.aprob += (objetivo - g.aprob) * 0.04 + U.gauss(0, 0.5);
           g.aprob = U.clamp(g.aprob, 8, 85);
         }
+        if (id === 'ES') { Op.turnoES(E); continue; }
         // Popularidad de partidos
         const ps = P.partidos.map(p => E.partidos[p]);
         for (const p of ps) {
@@ -51,6 +53,41 @@ window.EUROPA = window.EUROPA || {};
       if (E.jugador && E.fecha.t % 2 === 0) Op.serie(E);
     },
 
+    /* España: partidos nacionales (voto base) y regionales (voto en su territorio). */
+    turnoES(E) {
+      const P = E.paises.ES, g = P.gob;
+      if (E.esp.sumaNac == null) E.esp.sumaNac = U.suma(E.esp.nacionales.map(k => E.partidos[k].pop));
+      for (const k of E.esp.nacionales) {
+        const p = E.partidos[k];
+        let d = (p.base - p.pop) * 0.012;
+        if (g) {
+          const enGob = g.coalicion.includes(k), apoyo = (g.apoyoExterno || []).includes(k);
+          if (enGob) d += (g.aprob - 42) * 0.0016 * (k === g.partido ? 1.1 : 0.55);
+          else if (!apoyo) d += (42 - g.aprob) * 0.0007;
+        }
+        d += U.gauss(0, 0.04 + 0.01 * Math.sqrt(p.pop));
+        p.pop = Math.max(0.15, p.pop + d); p.base = Math.max(0.15, p.base + U.gauss(0, 0.008));
+      }
+      Op.normalizarES(E);
+      for (const k of E.esp.regionales) {
+        const p = E.partidos[k];
+        for (const r in p.rp) {
+          const rec = E.esp.ccaa[r];
+          let d = (p.rp0[r] - p.rp[r]) * 0.01 + U.gauss(0, 0.05 + 0.01 * Math.sqrt(p.rp[r]));
+          if (rec && p.indep > 0.5) d += (rec.indep - rec.indep0) * 0.004 * p.indep;     // la marea independentista arrastra a los partidos
+          p.rp[r] = U.clamp(p.rp[r] + d, 0.3, 60);
+        }
+        p.pop = p.rp[p.region];
+      }
+    },
+    empujeES(E, pid, d) { const p = E.partidos[pid]; if (!p || p.amb !== 'nac') return; p.pop = Math.max(0.2, p.pop + d); p.base = Math.max(0.2, p.base + d * 0.3); Op.normalizarES(E); },
+    /* Mantiene constante la suma del voto base de los nacionales (el resto va a los regionales). */
+    normalizarES(E) {
+      const ks = E.esp.nacionales, s = U.suma(ks.map(k => E.partidos[k].pop)), objetivo = E.esp.sumaNac != null ? E.esp.sumaNac : s;
+      ks.forEach(k => { E.partidos[k].pop = E.partidos[k].pop * objetivo / s; });
+      const sb = U.suma(ks.map(k => E.partidos[k].base)); ks.forEach(k => { E.partidos[k].base = E.partidos[k].base * objetivo / sb; });
+    },
+
     normalizar(ps, k) {
       const s = U.suma(ps.map(p => p[k])); if (s <= 0) return;
       for (const p of ps) p[k] = p[k] * 100 / s;
@@ -58,7 +95,7 @@ window.EUROPA = window.EUROPA || {};
 
     serie(E) {
       const P = E.paises[E.jugador.pais];
-      P.partidos.forEach(pid => U.serie('pop:' + pid, E.partidos[pid].pop, 400));
+      P.partidos.forEach(pid => U.serie('pop:' + pid, E.jugador.pais === 'ES' ? (E.partidos[pid].popN || E.partidos[pid].pop) : E.partidos[pid].pop, 400));
     },
 
     /* Encuesta publicada: la popularidad real con error de muestreo y sesgo del medio. */
@@ -93,4 +130,4 @@ window.EUROPA = window.EUROPA || {};
 
   C.Opinion = Op;
   C.Tiempo.registrar('opinion', Op, 15);
-})(window.EUROPA);
+})(window.ESP);

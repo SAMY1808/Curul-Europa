@@ -1,12 +1,12 @@
 /* Gobierno: formación de coaliciones, reparto de ministerios, estabilidad y caída de gobiernos. */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
   const U = C.U;
   const D = () => C.DATA;
   const ORDEN_MIN = ['eco', 'int', 'ext', 'def', 'jus', 'eur', 'sal', 'edu', 'tra', 'amb', 'agr', 'ter'];
 
   const G = {
-    init(E) { for (const id in E.paises) G.formar(E, id, { inicial: true }); },
+    init(E) { for (const id in E.paises) if (id !== 'ES') G.formar(E, id, { inicial: true }); },
 
     /* Partidos que no pueden entrar en el Gobierno (cordón sanitario). */
     vetado(E, id, pid) {
@@ -171,6 +171,7 @@ window.EUROPA = window.EUROPA || {};
 
     turno(E) {
       for (const id in E.paises) {
+        if (id === 'ES') continue;
         const P = E.paises[id], g = P.gob; if (!g) continue;
         const prop = E.jugador && E.jugador.pais === id;
         g.estab += U.gauss(0, 0.55) + (g.aprob - 38) * 0.008 + (g.tipo === 'minoria' ? -0.12 : 0.03) + (P.ec.pde ? -0.05 : 0);
@@ -199,4 +200,4 @@ window.EUROPA = window.EUROPA || {};
 
   C.Gobierno = G;
   C.Tiempo.registrar('gobierno', G, 25);
-})(window.EUROPA);
+})(window.ESP);

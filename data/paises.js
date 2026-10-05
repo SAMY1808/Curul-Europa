@@ -11,9 +11,9 @@
    elec: centro de gravedad del electorado {eco, soc, eu} (−100…+100)
    int: intereses sectoriales (agr, ind, fin, ene, def, mig, tur, pes, neu, nuc, pyme)
    ec: [crecimiento %, inflación %, paro %, deuda % PIB, déficit % PIB] */
-window.EUROPA = window.EUROPA || {};
-EUROPA.DATA = EUROPA.DATA || {};
-EUROPA.DATA.paises = {
+window.ESP = window.ESP || {};
+ESP.DATA = ESP.DATA || {};
+ESP.DATA.paises = {
   /* ───────────── Estados miembros ───────────── */
   DE: { nombre: 'Alemania', cap: 'Berlín', bandera: '🇩🇪', pob: 84.5, pib: 4400, estado: 'ue', euro: true, reg: 'parl', jefe: 'Canciller', cam: 'Bundestag', esc: 630, sis: 'prop', um: 5, k: 1.0, form: 'sl', mand: 4, prox: [2029, 2], meps: 96, cordon: true,
         elec: { eco: 8, soc: -5, eu: 35 }, int: ['ind', 'fin', 'ene'], ec: [0.4, 2.2, 3.7, 64, 2.8], rasgo: 'Motor industrial de Europa; coaliciones largas y un cordón sanitario firme contra la extrema derecha.' },
@@ -69,35 +69,14 @@ EUROPA.DATA.paises = {
         elec: { eco: 5, soc: -10, eu: 55 }, int: ['fin'], ec: [1.0, 2.0, 6.5, 26, 0.0], rasgo: 'Centro financiero y sede judicial de la UE; coaliciones de tres partidos.' },
   MT: { nombre: 'Malta', cap: 'La Valeta', bandera: '🇲🇹', pob: 0.57, pib: 24, estado: 'ue', euro: true, reg: 'parl', jefe: 'Primer ministro', cam: 'Cámara de Representantes', esc: 79, sis: 'prop', um: 0, k: 1.7, form: 'dhondt', mand: 5, prox: [2027, 5], meps: 6, cordon: false,
         elec: { eco: -5, soc: 5, eu: 30 }, int: ['tur', 'fin', 'neu'], ec: [4.0, 2.5, 3.0, 47, 3.0], rasgo: 'Casi un bipartidismo perfecto: dos partidos se reparten el 98 % de los votos.' },
-  /* ───────────── Antiguo miembro ───────────── */
-  UK: { nombre: 'Reino Unido', cap: 'Londres', bandera: '🇬🇧', pob: 69, pib: 3000, estado: 'exue', euro: false, reg: 'parl', jefe: 'Primer ministro', cam: 'Cámara de los Comunes', esc: 650, sis: 'mayor', um: 0, k: 2.6, mand: 5, prox: [2029, 7], meps: 0, cordon: false,
-        elec: { eco: 0, soc: 0, eu: 5 }, int: ['fin', 'def', 'pes'], ec: [1.0, 3.0, 4.6, 100, 4.5], rasgo: 'Fuera de la UE desde 2020: el sistema mayoritario puede dar mayorías enormes con el 35 % de los votos.' },
-  /* ───────────── Candidatos a la adhesión ───────────── */
-  TR: { nombre: 'Turquía', cap: 'Ankara', bandera: '🇹🇷', pob: 85, pib: 1100, estado: 'candidato', euro: false, reg: 'pres', jefe: 'Presidente', cam: 'Gran Asamblea Nacional', esc: 600, sis: 'prop', um: 7, k: 1.1, form: 'dhondt', mand: 5, prox: [2028, 6], meps: 0, pres: { mand: 5, prox: [2028, 6], eu: false, lim: 2, titulo: 'Presidente de la República' }, cordon: false,
-        elec: { eco: 5, soc: 40, eu: -10 }, int: ['ind', 'def', 'tur', 'mig'], ec: [3.5, 35, 8.5, 25, 4.0], candidato: { progreso: 30, ritmo: 0.15, congelada: true }, rasgo: 'Candidata desde 1999 con negociaciones congeladas, inflación desbocada y presidencialismo fuerte.' },
-  UA: { nombre: 'Ucrania', cap: 'Kiev', bandera: '🇺🇦', pob: 33, pib: 170, estado: 'candidato', euro: false, reg: 'semi', jefe: 'Primer ministro', cam: 'Rada Suprema', esc: 450, sis: 'prop', um: 5, k: 1.0, form: 'dhondt', mand: 5, prox: [2028, 10], meps: 0, pres: { mand: 5, prox: [2029, 3], eu: false, lim: 0, titulo: 'Presidente de Ucrania' }, cordon: false, guerra: true,
-        elec: { eco: 0, soc: 5, eu: 70 }, int: ['def', 'agr', 'ene'], ec: [2.0, 10, 14, 95, 15], candidato: { progreso: 38, ritmo: 0.35 }, rasgo: 'En guerra: elecciones aplazadas bajo ley marcial y una candidatura que es una cuestión de supervivencia.' },
-  RS: { nombre: 'Serbia', cap: 'Belgrado', bandera: '🇷🇸', pob: 6.7, pib: 70, estado: 'candidato', euro: false, reg: 'parl', jefe: 'Primer ministro', cam: 'Asamblea Nacional', esc: 250, sis: 'prop', um: 3, k: 1.0, form: 'dhondt', mand: 4, prox: [2027, 12], meps: 0, cordon: false,
-        elec: { eco: 0, soc: 35, eu: -5 }, int: ['agr', 'ind', 'def'], ec: [3.0, 4.0, 9.0, 48, 2.5], candidato: { progreso: 35, ritmo: 0.2 }, rasgo: 'Equilibrio entre Bruselas, Moscú y Pekín, y Kosovo como asunto pendiente.' },
-  AL: { nombre: 'Albania', cap: 'Tirana', bandera: '🇦🇱', pob: 2.4, pib: 20, estado: 'candidato', euro: false, reg: 'parl', jefe: 'Primer ministro', cam: 'Kuvendi', esc: 140, sis: 'prop', um: 1, k: 1.1, form: 'dhondt', mand: 4, prox: [2029, 5], meps: 0, cordon: false,
-        elec: { eco: 0, soc: 15, eu: 60 }, int: ['tur', 'agr'], ec: [3.5, 2.5, 10, 57, 2.0], candidato: { progreso: 55, ritmo: 0.4 }, rasgo: 'Una de las poblaciones más proeuropeas del continente, con una oposición que no consigue ganar.' },
-  BA: { nombre: 'Bosnia y Herzegovina', cap: 'Sarajevo', bandera: '🇧🇦', pob: 3.2, pib: 25, estado: 'candidato', euro: false, reg: 'parl', jefe: 'Presidente del Consejo de Ministros', cam: 'Cámara de Representantes', esc: 42, sis: 'prop', um: 3, k: 1.05, form: 'sl', mand: 4, prox: [2030, 10], meps: 0, cordon: false,
-        elec: { eco: 0, soc: 25, eu: 25 }, int: ['ind', 'ene'], ec: [2.5, 3.5, 12, 35, 1.5], candidato: { progreso: 25, ritmo: 0.2 }, rasgo: 'Un Estado de tres pueblos constituyentes: casi nada se aprueba sin pactos étnicos.' },
-  MK: { nombre: 'Macedonia del Norte', cap: 'Skopie', bandera: '🇲🇰', pob: 1.8, pib: 14, estado: 'candidato', euro: false, reg: 'parl', jefe: 'Primer ministro', cam: 'Sobranie', esc: 120, sis: 'prop', um: 0, k: 1.05, form: 'dhondt', mand: 4, prox: [2028, 5], meps: 0, cordon: false,
-        elec: { eco: 0, soc: 25, eu: 25 }, int: ['agr', 'ind'], ec: [3.0, 3.5, 12, 45, 3.5], candidato: { progreso: 40, ritmo: 0.15 }, rasgo: 'Candidata bloqueada por vetos de vecinos sobre identidad e historia.' },
-  ME: { nombre: 'Montenegro', cap: 'Podgorica', bandera: '🇲🇪', pob: 0.62, pib: 7, estado: 'candidato', euro: 'uni', reg: 'parl', jefe: 'Primer ministro', cam: 'Skupština', esc: 81, sis: 'prop', um: 3, k: 1.05, form: 'dhondt', mand: 4, prox: [2027, 6], meps: 0, cordon: false,
-        elec: { eco: 0, soc: 20, eu: 40 }, int: ['tur'], ec: [3.0, 3.5, 12, 60, 3.0], candidato: { progreso: 70, ritmo: 0.5 }, rasgo: 'Favorita para ser el próximo miembro: usa el euro de forma unilateral y aspira a cerrar capítulos.' },
-  MD: { nombre: 'Moldavia', cap: 'Chisináu', bandera: '🇲🇩', pob: 2.4, pib: 17, estado: 'candidato', euro: false, reg: 'parl', jefe: 'Primer ministro', cam: 'Parlamento', esc: 101, sis: 'prop', um: 5, k: 1.08, form: 'dhondt', mand: 4, prox: [2029, 9], meps: 0, cordon: false,
-        elec: { eco: -5, soc: 15, eu: 20 }, int: ['agr', 'ene'], ec: [2.0, 6, 5, 38, 4.0], candidato: { progreso: 35, ritmo: 0.3 }, rasgo: 'Entre Bruselas y Moscú, con Transnistria y mucha presión híbrida sobre sus elecciones.' },
-  GE: { nombre: 'Georgia', cap: 'Tiflis', bandera: '🇬🇪', pob: 3.7, pib: 33, estado: 'candidato', euro: false, reg: 'parl', jefe: 'Primer ministro', cam: 'Parlamento', esc: 150, sis: 'prop', um: 5, k: 1.1, form: 'dhondt', mand: 4, prox: [2028, 10], meps: 0, cordon: false,
-        elec: { eco: 0, soc: 25, eu: 50 }, int: ['tur', 'agr'], ec: [7.0, 3.5, 15, 36, 2.5], candidato: { progreso: 20, ritmo: 0.05, congelada: true }, rasgo: 'La opinión pública quiere Europa, pero el partido gobernante ha congelado el proceso de adhesión.' }
+  
+  
 };
 
 /* Posición en la cuadrícula del mapa de mosaicos de Europa (col, fila). Cada mosaico es un país. */
-EUROPA.DATA.mosaico = {
-  IE: [1, 3], UK: [2, 3], PT: [1, 7], ES: [2, 7], FR: [3, 5], BE: [3, 4], NL: [4, 3], LU: [4, 4], DE: [5, 4],
+ESP.DATA.mosaico = {
+  IE: [1, 3], PT: [1, 7], ES: [2, 7], FR: [3, 5], BE: [3, 4], NL: [4, 3], LU: [4, 4], DE: [5, 4],
   DK: [5, 2], SE: [6, 1], FI: [7, 0], EE: [7, 2], LV: [7, 3], LT: [7, 4], PL: [6, 4], CZ: [5, 5], SK: [6, 5],
   AT: [5, 6], HU: [7, 5], SI: [4, 6], HR: [4, 7], RO: [8, 5], BG: [8, 6], IT: [3, 6], MT: [4, 9], EL: [7, 7],
-  CY: [9, 9], AL: [6, 8], ME: [5, 8], BA: [5, 7], RS: [6, 7], MK: [6, 9], MD: [9, 5], UA: [9, 4], GE: [11, 6], TR: [10, 8]
-};
+  CY: [9, 9], };
 

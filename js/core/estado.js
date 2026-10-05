@@ -1,7 +1,7 @@
 /* Estado del mundo: creación vacía, versión de esquema y migraciones de partidas antiguas. */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
-  const ESQUEMA = 1;
+  const ESQUEMA = 2;
   C.VERSION = '0.1.0';
 
   C.Estado = {
@@ -24,6 +24,7 @@ window.EUROPA = window.EUROPA || {};
         eventos: { pendientes: [], historial: [] },
         noticias: [],
         series: {},
+        esp: {},               // España: provincias, comunidades, municipios, Cortes, Consejo de Ministros, pactos
         ui: {}
       };
     },
@@ -36,4 +37,4 @@ window.EUROPA = window.EUROPA || {};
       return E;
     }
   };
-})(window.EUROPA);
+})(window.ESP);

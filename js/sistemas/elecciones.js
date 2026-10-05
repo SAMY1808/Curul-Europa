@@ -1,6 +1,6 @@
 /* Elecciones legislativas: sistemas electorales (proporcional, mayoritario, mixto), umbrales,
    calendario de cada país y noche electoral del país del jugador. */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
   const U = C.U;
   const D = () => C.DATA;
@@ -66,6 +66,7 @@ window.EUROPA = window.EUROPA || {};
 
     init(E) {
       for (const id in E.paises) {
+        if (id === 'ES') continue;                // España tiene su propio sistema (generales.js)
         const P = E.paises[id], d = D().paises[id];
         // Fecha de la próxima elección
         const [y, m] = d.prox;
@@ -160,6 +161,7 @@ window.EUROPA = window.EUROPA || {};
     turno(E) {
       const J = E.jugador;
       for (const id in E.paises) {
+        if (id === 'ES') continue;
         const P = E.paises[id];
         if (P.flags.leyMarcial) {
           // Si nadie juega en Ucrania, la guerra puede acabar por sí sola
@@ -231,4 +233,4 @@ window.EUROPA = window.EUROPA || {};
 
   C.Elecciones = El;
   C.Tiempo.registrar('elecciones', El, 20);
-})(window.EUROPA);
+})(window.ESP);

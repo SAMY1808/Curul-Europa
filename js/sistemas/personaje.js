@@ -1,64 +1,122 @@
-/* Personaje del jugador: creación, carrera, atributos, agenda semanal y acciones. */
-window.EUROPA = window.EUROPA || {};
+/* Personaje del jugador en España: creación, carrera (local → autonómica → nacional → europea), atributos,
+   agenda semanal y acciones. */
+window.ESP = window.ESP || {};
 (function (C) {
   const U = C.U;
   const D = () => C.DATA;
   const clamp = U.clamp;
   const UE_CARGOS = ['mep', 'comisario', 'presCom', 'presCE', 'presPE'];
+  const NIVEL_DE = { activista: null, concejal: 'local', alcalde: 'local', dipauto: 'autonomico', consejero: 'autonomico', presauto: 'autonomico', diputado: 'nacional', senador: 'nacional', ministro: 'nacional', vicepres: 'nacional', pm: 'nacional', mep: 'europeo', comisario: 'europeo', presCom: 'europeo', presCE: 'europeo', presPE: 'europeo' };
 
   const Pj = {
     init(E) {
-      const op = E.meta.opts; if (!op) return;
-      const P = E.paises[op.pais];
-      let pid = op.partido;                                     // id del partido elegido
-      if (op.nuevo) pid = op.pais + '_' + (D().partidos[op.pais].length);
+      const op = E.meta.opts; if (!op || !op.partido && !op.nuevo) return;
+      const P = E.paises.ES;
+      let pid = op.partido;
+      if (op.nuevo) pid = 'ES_' + op.nuevo.sigla;
       const pa = E.partidos[pid];
       const tr = D().trayectorias.find(t => t.id === op.trayectoria) || D().trayectorias[0];
       const atrib = { carisma: 3, oratoria: 3, gestion: 3, negociacion: 3, integridad: 3 };
       Object.keys(op.atrib || {}).forEach(k => atrib[k] = op.atrib[k]);
       for (const k in tr.atrib) atrib[k] = Math.min(10, atrib[k] + tr.atrib[k]);
-      const seats = P.escanos[pid] || 0;
       let rol = op.rol || 'base';
       if (op.nuevo) rol = 'lider';
-      if (seats === 0 && rol !== 'lider') rol = 'base';
+      const nivel = op.nivel || 'nacional';
       const J = E.jugador = {
-        nombre: op.nombre || 'Alex Navarro', g: op.genero || 'm', edad: op.edad || 38, pais: op.pais, partido: pid,
-        cargo: 'diputado', rol, ministerio: null, trayectoria: tr.id,
-        eco: Math.round(clamp(op.eco != null ? op.eco : pa.eco, -100, 100)), soc: Math.round(clamp(op.soc != null ? op.soc : pa.soc, -100, 100)), eu: Math.round(clamp(op.eu != null ? op.eu : pa.eu, -100, 100)),
-        atrib, prestigio: tr.prestigio + (rol === 'lider' ? 25 : rol === 'portavoz' ? 12 : 0), pop: tr.pop + (rol === 'lider' ? 8 : 0), capEU: tr.capEU,
-        agenda: { puntos: 5, max: 5, hechas: [] }, historial: [], campania: null, electo: false, cumple: E.meta.inicio.slice(5), hitos: {}
+        nombre: op.nombre || 'Alex Navarro', g: op.genero || 'm', edad: op.edad || 38, pais: 'ES', partido: pid, nivel,
+        cargo: 'activista', rol, ministerio: null, trayectoria: tr.id,
+        eco: Math.round(clamp(op.eco != null ? op.eco : pa.eco, -100, 100)), soc: Math.round(clamp(op.soc != null ? op.soc : pa.soc, -100, 100)), eu: Math.round(clamp(op.eu != null ? op.eu : pa.eu, -100, 100)), ter: Math.round(clamp(op.ter != null ? op.ter : pa.ter, -100, 100)),
+        atrib, prestigio: tr.prestigio + (rol === 'lider' ? 25 : rol === 'portavoz' ? 12 : rol === 'direccion' ? 6 : 0), pop: tr.pop + (rol === 'lider' ? 8 : 0), capEU: tr.capEU,
+        agenda: { puntos: 5, max: 5, hechas: [] }, historial: [], campania: null, electo: false, escReg: false, concejal: false, lidReg: null, aspira: null, consejeria: null,
+        cumple: E.meta.inicio.slice(5), hitos: {}, region: op.region || null, muni: op.muni || null, circ: op.circ || null
       };
       if (op.nuevo) pa.lider = 'J';
-      C.Parlamento.colocarJugador(E);
-      if (!J.electo) J.cargo = 'activista';
+      // Territorio de partida
+      if (nivel === 'local') {
+        if (!J.muni) J.muni = 'm_mad';
+        J.region = E.esp.muni.m[J.muni].ccaa; J.circ = E.esp.muni.m[J.muni].prov;
+      } else if (nivel === 'autonomico') {
+        if (!J.region) J.region = pa.region || 'MAD';
+        if (!J.circ) J.circ = C.Es.provinciasDe(J.region)[0];
+      } else {
+        if (pa.amb === 'reg' && pa.region && (!J.circ || D().provincias[J.circ][1] !== pa.region)) J.circ = Pj.mejorProvincia(E, pid, pa.region);   // un partido regional sólo se presenta en su territorio
+        if (!J.circ) J.circ = Pj.mejorProvincia(E, pid, op.region);
+        J.region = D().provincias[J.circ][1];
+      }
+      C.Congreso.colocarJugador(E);
+      if (nivel === 'nacional' && !J.electo && rol !== 'lider') J.cargo = 'activista';
+      // Presidente del Gobierno: líder del partido que gobierna
+      const g = P.gob;
+      if (rol === 'lider' && P.gob && P.gob.partido === pid) { g.pm = 'J'; }
+      if (nivel === 'autonomico') Pj.colocarAutonomico(E);
+      if (nivel === 'local') Pj.colocarLocal(E);
+      if (rol === 'lider' && pa.amb === 'nac' && nivel !== 'nacional' && !J.lidReg && J.region) { E.esp.ccaa[J.region].cab[pid] = 'J'; J.lidReg = J.region; }
       J.agenda.puntos = Pj.maxAgenda(E);
-      Pj.log(E, `Comienza tu carrera política como ${Pj.cargoTxt(E)} de ${pa.nombre} (${D().paises[J.pais].nombre}).`);
-      C.Gobierno.repartirMinisterios(E);
+      C.Ejecutivo.repartirMinisterios(E);
+      Pj.ministroSiProcede(E);
       Pj.sincronizar(E);
-      C.Parlamento.sembrar(E);
-      const g = P.gob, pm = E.politicos[g.pm], d = D().paises[J.pais];
-      C.Noticias.poner(E, 'politica', `${pm ? pm.n : 'El Ejecutivo'} (${E.partidos[g.partido].sigla}) gobierna ${d.nombre} ${g.coalicion.length > 1 ? 'en coalición con ' + g.coalicion.filter(k => k !== g.partido).map(k => E.partidos[k].sigla).join(', ') : g.tipo === 'minoria' ? 'en minoría' : 'en solitario'}.`, J.pais);
+      Pj.log(E, `Comienza tu carrera política como ${Pj.cargoTxt(E)} (${pa.nombre}).`);
+      const pm = E.politicos[g.pm];
+      C.Noticias.poner(E, 'politica', `${pm ? pm.n : 'El Ejecutivo'} (${E.partidos[g.partido].sigla}) gobierna España ${g.coalicion.length > 1 ? 'en coalición con ' + g.coalicion.filter(k => k !== g.partido).map(k => E.partidos[k].sigla).join(', ') : g.tipo === 'minoria' ? 'en minoría' : 'en solitario'}.`, 'ES');
       C.Noticias.poner(E, 'europa', `Presidencia de la Comisión Europea: ${E.ue.comision.presidente.n}. El Parlamento Europeo cuenta con ${E.ue.pe.total} escaños.`);
+    },
+
+    mejorProvincia(E, pid, region) {
+      let mx = -1, mj = null;
+      const provs = region ? C.Es.provinciasDe(region) : Object.keys(E.esp.prov);
+      for (const prov of provs) { const k = E.esp.prov[prov].escanos[pid] || 0; if (k > mx) { mx = k; mj = prov; } }
+      return mj || provs[0];
+    },
+
+    colocarAutonomico(E) {
+      const J = E.jugador, rc = E.esp.ccaa[J.region], n = rc.parl.escanos[J.partido] || 0;
+      if (J.rol === 'lider' && E.partidos[J.partido].amb === 'reg' && E.partidos[J.partido].region !== J.region) J.region = E.partidos[J.partido].region;
+      J.escReg = n > 0 && (J.rol !== 'base' || U.chance(0.7));
+      if (J.rol === 'lider' && n > 0) { J.escReg = true; if (E.partidos[J.partido].amb === 'nac') { rc.cab[J.partido] = 'J'; J.lidReg = J.region; } if (rc.gob && rc.gob.partido === J.partido) rc.gob.pres = 'J'; }
+      if (J.rol === 'lider' && E.partidos[J.partido].amb === 'reg' && rc.gob && rc.gob.partido === J.partido) rc.gob.pres = 'J';
+    },
+
+    colocarLocal(E) {
+      const J = E.jugador, m = E.esp.muni.m[J.muni], n = m.esc[J.partido] || 0;
+      if (J.rol === 'lider' && m.alcalde === J.partido) { if (m.pm && m.pm !== 'J') delete E.politicos[m.pm]; m.pm = 'J'; E.politicos.J.cargo = 'alcalde'; J.concejal = true; }
+      else J.concejal = n > 0 && (J.rol === 'lider' || J.rol !== 'base' || U.chance(0.75));
+    },
+
+    /* Si el partido del jugador está en la coalición, le toca una cartera. */
+    ministroSiProcede(E) {
+      const J = E.jugador, g = E.paises.ES.gob; if (!g || g.pm === 'J' || !g.coalicion.includes(J.partido)) return;
+      if (J.rol !== 'lider' && J.rol !== 'direccion') return;
+      if (Object.values(g.ministros).includes('J')) return;
+      const mine = Object.keys(g.ministros).filter(m => { const q = E.politicos[g.ministros[m]]; return q && q.p === J.partido; });
+      if (!mine.length) return;
+      const pref = J.ministerio && mine.includes(J.ministerio) ? J.ministerio : mine.sort((a, b) => D().ministerios.find(x => x.id === b).peso - D().ministerios.find(x => x.id === a).peso)[0];
+      const old = E.politicos[g.ministros[pref]]; if (old && old.id !== 'J') old.cargo = null;
+      g.ministros[pref] = 'J'; J.ministerio = pref;
     },
 
     maxAgenda(E) {
       const J = E.jugador;
-      return 5 + (['ministro', 'pm', 'presidente', 'comisario', 'presCom', 'presCE', 'presPE'].includes(J.cargo) ? 1 : 0) + (J.rol === 'lider' ? 1 : 0);
+      return 5 + (['ministro', 'pm', 'presauto', 'vicepres', 'comisario', 'presCom', 'presCE', 'presPE'].includes(J.cargo) ? 1 : 0) + (J.rol === 'lider' ? 1 : 0);
     },
 
     cargoTxt(E) {
       const J = E.jugador; if (!J) return '—';
-      const d = D().paises[J.pais];
-      if (J.cargo === 'presidente') return d.pres ? d.pres.titulo : 'Presidente/a';
-      if (J.cargo === 'pm') return d.jefe + ' de ' + d.nombre;
-      if (J.cargo === 'ministro') { const m = D().ministerios.find(x => x.id === J.ministerio); return 'Ministro/a de ' + (m ? m.nombre : 'Gobierno'); }
-      if (J.cargo === 'mep' && J.meps) return 'Eurodiputado/a (' + (D().grupos[J.meps.grupo] || {}).sigla + ')';
-      return D().cargos[J.cargo].nombre;
+      const rc = J.region && E.esp.ccaa[J.region], m = J.muni && E.esp.muni.m[J.muni];
+      switch (J.cargo) {
+        case 'pm': return 'Presidente/a del Gobierno de España';
+        case 'ministro': { const mi = D().ministerios.find(x => x.id === J.ministerio); return 'Ministro/a de ' + (mi ? mi.nombre : 'Gobierno'); }
+        case 'presauto': return 'Presidente/a de ' + (rc ? D().ccaa[J.region].nombre : 'la comunidad');
+        case 'consejero': return 'Consejero/a de ' + (rc ? D().ccaa[J.region].nombre : '');
+        case 'dipauto': return 'Diputado/a autonómico/a (' + (rc ? D().ccaa[J.region].nombre : '') + ')';
+        case 'alcalde': return 'Alcalde/sa de ' + (m ? m.nombre : '');
+        case 'concejal': return 'Concejal/a de ' + (m ? m.nombre : '');
+        case 'diputado': return 'Diputado/a por ' + (J.circ ? D().provincias[J.circ][0] : 'España');
+        case 'mep': return 'Eurodiputado/a' + (J.meps && D().grupos[J.meps.grupo] ? ' (' + D().grupos[J.meps.grupo].sigla + ')' : '');
+        default: return D().cargos[J.cargo].nombre;
+      }
     },
 
-    /* Registra el primer momento en que el jugador alcanza cada cargo. */
     hito(E) { const J = E.jugador; if (J.cargo && J.hitos[J.cargo] === undefined) J.hitos[J.cargo] = E.fecha.t; },
-
     nivelMax(E) { const J = E.jugador; return Math.max(D().cargos[J.cargo].nivel, ...Object.keys(J.hitos).map(k => (D().cargos[k] || { nivel: 0 }).nivel)); },
 
     puntuacion(E) {
@@ -66,78 +124,77 @@ window.EUROPA = window.EUROPA || {};
       return Math.round(Pj.nivelMax(E) * 120 + J.prestigio + J.capEU * 0.6 + leyes * 15 + E.fecha.t / 52 * 5);
     },
 
-    /* Retirada de la política: epílogo con el balance de la carrera. */
     retirar(E) {
       const J = E.jugador; J.retirado = true;
       const nom = Object.keys(J.hitos).sort((a, b) => J.hitos[a] - J.hitos[b]).map(k => `${D().cargos[k].nombre} (${U.fmtT(J.hitos[k], true)})`);
-      C.Personaje.log(E, 'Te retiras de la política.');
-      C.Eventos.info(E, '🏁 Fin de una carrera', `${J.nombre} se retira tras ${U.d1(E.fecha.t / 52)} años en política. Cargos: ${nom.join(' → ')}. Puntuación final: ${Pj.puntuacion(E)} puntos. Puedes seguir observando cómo evoluciona Europa o iniciar una nueva carrera desde el menú.`);
+      Pj.log(E, 'Te retiras de la política.');
+      C.Eventos.info(E, '🏁 Fin de una carrera', `${J.nombre} se retira tras ${U.d1(E.fecha.t / 52)} años en política. Cargos: ${nom.join(' → ')}. Puntuación final: ${Pj.puntuacion(E)} puntos. Puedes seguir observando cómo evoluciona España o iniciar una nueva carrera desde el menú.`);
     },
 
-    enParlamento(E) { return !!(E.jugador && E.parl.miembros.includes('J')); },
+    enParlamento(E) { return !!(E.jugador && E.jugador.electo); },
     esUE(E) { return UE_CARGOS.includes(E.jugador.cargo); },
 
-    /* Ajusta el cargo según el escaño y el Gobierno actuales. */
+    /* Recalcula el cargo más alto que ocupa el jugador. */
     sincronizar(E) {
       const J = E.jugador; if (!J) return;
-      const P = E.paises[J.pais], g = P.gob;
       if (Pj.esUE(E)) { Pj.hito(E); Pj.syncPol(E); return; }
-      const seat = E.parl.miembros.includes('J');
-      if (P.pres && P.pres.pol === 'J') { J.cargo = 'presidente'; J.ministerio = null; Pj.hito(E); Pj.syncPol(E); return; }
-      let cargo = seat ? 'diputado' : 'activista', min = null;
+      const g = E.paises.ES.gob, rc = J.region && E.esp.ccaa[J.region], m = J.muni && E.esp.muni.m[J.muni];
+      let cargo = 'activista', min = null;
+      const alza = c => { if (D().cargos[c].nivel >= D().cargos[cargo].nivel) cargo = c; };
+      if (m && m.pm === 'J') alza('alcalde'); else if (J.concejal) alza('concejal');
+      if (rc) {
+        if (rc.gob && rc.gob.pres === 'J') alza('presauto');
+        else if (J.consejeria === J.region && rc.gob && rc.gob.coalicion.includes(J.partido)) alza('consejero');
+        else if (J.escReg) alza('dipauto');
+      }
+      if (J.electo) alza('diputado');
       if (g) {
         if (g.pm === 'J') cargo = 'pm';
-        else { for (const k in g.ministros) if (g.ministros[k] === 'J') { cargo = 'ministro'; min = k; } }
+        else for (const k in g.ministros) if (g.ministros[k] === 'J') { alza('ministro'); if (cargo === 'ministro') min = k; }
       }
       if (cargo !== J.cargo) {
         const sube = D().cargos[cargo].nivel > D().cargos[J.cargo].nivel;
         J.cargo = cargo; J.ministerio = min;
         if (sube) Pj.log(E, `Asciendes a ${Pj.cargoTxt(E)}.`);
       } else J.ministerio = min;
-      Pj.hito(E);
-      Pj.syncPol(E);
+      if (NIVEL_DE[cargo]) J.nivel = NIVEL_DE[cargo];
+      Pj.hito(E); Pj.syncPol(E);
     },
     syncPol(E) {
       const J = E.jugador, p = E.politicos.J; if (!p) return;
-      p.p = J.partido; p.eco = J.eco; p.soc = J.soc; p.eu = J.eu; p.e = J.edad; p.n = J.nombre;
+      p.p = J.partido; p.eco = J.eco; p.soc = J.soc; p.eu = J.eu; p.ter = J.ter; p.e = J.edad; p.n = J.nombre; p.reg = J.region;
       p.cargo = J.cargo === 'pm' ? 'pm' : J.cargo === 'ministro' ? 'min:' + J.ministerio : null;
     },
 
-    /* Gana la presidencia del país: deja el escaño y (en sistemas semipresidenciales) el liderazgo del partido. */
-    alPresidente(E) {
-      const J = E.jugador, P = E.paises[J.pais], d = D().paises[J.pais];
-      E.parl.miembros = E.parl.miembros.filter(i => i !== 'J');
-      E.parl.miembros.push(C.Parlamento.nuevoDiputado(E, J.partido).id);
-      J.electo = false;
-      if (P.gob) for (const k in P.gob.ministros) if (P.gob.ministros[k] === 'J') P.gob.ministros[k] = null;
-      P.pres.pol = 'J';
-      if (d.reg === 'semi' && E.partidos[J.partido].lider === 'J') { C.Gobierno.nuevoLider(E, J.partido, 'tras la elección de ' + J.nombre + ' como presidente'); J.rol = 'direccion'; }
-      J.cargo = 'presidente'; J.ministerio = null; Pj.hito(E);
-      if (P.gob) C.Gobierno.cubrirVacantes(E);
-      Pj.log(E, 'Eres elegido/a ' + (d.pres ? d.pres.titulo : 'presidente/a') + '.');
-      Pj.cambiar(E, { prestigio: 15, pop: 10 }, true);
+    /* Deja los cargos de un nivel inferior al ascender. */
+    dejar(E, nivel) {
+      const J = E.jugador;
+      if (nivel === 'local') {
+        const m = J.muni && E.esp.muni.m[J.muni];
+        if (m && m.pm === 'J') { m.pm = null; C.Municipios.elegirAlcalde(E, J.muni, false); }
+        J.concejal = false;
+      }
+      if (nivel === 'autonomico') {
+        const rc = J.region && E.esp.ccaa[J.region];
+        if (rc && rc.gob && rc.gob.pres === 'J') { rc.cab[rc.gob.partido] = null; if (E.partidos[rc.gob.partido].amb === 'nac') rc.gob.pres = C.Territorio.cabeza(E, J.region, rc.gob.partido).id; else rc.gob.pres = E.partidos[rc.gob.partido].lider; }
+        J.escReg = false; J.consejeria = null; if (J.lidReg) { E.esp.ccaa[J.lidReg].cab[J.partido] = null; J.lidReg = null; }
+      }
     },
 
-    /* Representante del país en el Consejo Europeo: presidente (si lo decide el sistema) o jefe de Gobierno. */
-    representaEnUE(E) {
-      const J = E.jugador, d = D().paises[J.pais];
-      return d.pres && d.pres.eu ? J.cargo === 'presidente' : (J.cargo === 'pm' || (J.cargo === 'presidente' && d.reg === 'pres'));
-    },
+    representaEnUE(E) { return E.jugador.cargo === 'pm'; },
 
-    /* Paso a un cargo europeo: deja el escaño, la cartera y el liderazgo del partido si los tuviera. */
     alUE(E, cargo) {
-      const J = E.jugador, P = E.paises[J.pais];
+      const J = E.jugador;
       E.parl.miembros = E.parl.miembros.filter(i => i !== 'J');
-      E.parl.miembros.push(C.Parlamento.nuevoDiputado(E, J.partido).id);
-      J.electo = false;
-      if (P.gob) for (const k in P.gob.ministros) if (P.gob.ministros[k] === 'J') P.gob.ministros[k] = null;
-      if (J.rol === 'lider' && E.partidos[J.partido].lider === 'J') { C.Gobierno.nuevoLider(E, J.partido, 'tras la marcha de ' + J.nombre + ' a Bruselas'); J.rol = 'direccion'; }
-      J.cargo = cargo; J.cargoUE = cargo; J.ministerio = null; Pj.hito(E);
-      if (P.gob) C.Gobierno.cubrirVacantes(E);
+      if (J.electo) E.parl.miembros.push(C.Congreso.nuevoDiputado(E, J.partido, J.circ).id);
+      J.electo = false; Pj.dejar(E, 'local'); Pj.dejar(E, 'autonomico');
+      const g = E.paises.ES.gob;
+      if (g) for (const k in g.ministros) if (g.ministros[k] === 'J') g.ministros[k] = null;
+      if (J.rol === 'lider' && E.partidos[J.partido].lider === 'J') { C.Ejecutivo.nuevoLider(E, J.partido, 'tras la marcha de ' + J.nombre + ' a Bruselas'); J.rol = 'direccion'; }
+      J.cargo = cargo; J.cargoUE = cargo; J.ministerio = null; J.nivel = 'europeo'; Pj.hito(E);
+      if (g) C.Ejecutivo.cubrirVacantes(E);
     },
 
-    /* Ajusta capital político. Las ganancias por acciones corrientes son pequeñas y decrecientes;
-       los hitos (ascensos, leyes propias) usan fijo = true. */
     cambiar(E, d, fijo) {
       const J = E.jugador; if (!J) return;
       const K = { prestigio: 0.09, pop: 0.12, capEU: 0.07 };
@@ -151,52 +208,122 @@ window.EUROPA = window.EUROPA || {};
     },
     log(E, txt) { E.jugador.historial.unshift({ t: E.fecha.t, txt }); if (E.jugador.historial.length > 80) E.jugador.historial.length = 80; },
 
-    /* Resultado personal de unas elecciones: ¿repites escaño? */
-    tras_elecciones(E, previo, res) {
-      const J = E.jugador, P = E.paises[J.pais];
-      if (Pj.esUE(E)) { J.electo = false; return { electo: false, pos: 0, escanos: 0, ue: true }; }
-      const nuevos = P.escanos[J.partido] || 0, antes = previo ? (previo.escanos[J.partido] || 0) : 0;
-      let pos, eff = 0;
-      if (J.rol === 'lider') pos = 1;
-      else {
-        eff = J.prestigio * 0.7 + J.pop * 0.3 + ({ base: 0, portavoz: 8, direccion: 16 }[J.rol] || 0) + (J.campania ? J.campania.pts * 0.25 : 0);
-        pos = 1 + Math.floor((1 - clamp(eff, 0, 100) / 100) * (Math.max(antes, nuevos) + 3));
-      }
-      J.electo = pos <= nuevos;
-      const r = { electo: J.electo, pos, escanos: nuevos, antes };
-      if (!J.electo) { Pj.log(E, `No logras escaño en las elecciones (puesto ${pos} de lista; ${nuevos} escaños para tu partido).`); }
-      else Pj.log(E, `Eres reelegido/a: puesto ${pos} de la lista, ${nuevos} escaños para tu partido.`);
+    /* Empuje de la acción de campaña/gestión en el nivel donde juega el jugador. */
+    empuje(E, x, base) {
+      const J = E.jugador, pid = J.partido;
+      if (J.nivel === 'nacional' || J.nivel === 'europeo') return C.Opinion.empujeJ(E, x, base);
+      if (J.nivel === 'autonomico' && J.region) { const rc = E.esp.ccaa[J.region]; rc.bonus = rc.bonus || {}; rc.bonus[pid] = Math.min(0.12, (rc.bonus[pid] || 0) + x * 0.5); return x; }
+      if (J.nivel === 'local' && J.muni) { const m = E.esp.muni.m[J.muni]; if (m.loc[pid]) m.loc[pid] = Math.min(1.7, m.loc[pid] * (1 + x * 0.35)); return x; }
+      return 0;
+    },
+
+    /* Posición en la lista y resultado personal. */
+    posicion(E, J, antes, nuevos, extra) {
+      if (J.rol === 'lider') return 1;
+      const eff = J.prestigio * 0.7 + J.pop * 0.3 + ({ base: 0, portavoz: 8, direccion: 16 }[J.rol] || 0) + (J.campania ? J.campania.pts * 0.25 : 0) + (extra || 0);
+      return 1 + Math.floor((1 - clamp(eff, 0, 100) / 100) * (Math.max(antes, nuevos) + 3));
+    },
+
+    tras_generales(E, previo, res) {
+      const J = E.jugador;
+      if (Pj.esUE(E)) { J.electo = false; return { electo: false, ue: true }; }
+      const aspira = J.aspira && J.aspira.nivel === 'nacional';
+      if (J.nivel !== 'nacional' && !aspira) { J.campania = null; return null; }
+      const nuevos = E.paises.ES.escanos[J.partido] || 0, antes = previo ? (previo.escanos[J.partido] || 0) : 0;
+      const circ = J.circ, nProv = (res.prov[circ] && res.prov[circ].escanos[J.partido]) || 0;
+      let pos = Pj.posicion(E, J, antes, nuevos, aspira ? -6 : 0);
+      // En su circunscripción: la posición se compara con los escaños de su partido ahí
+      const posProv = J.rol === 'lider' ? 1 : 1 + Math.floor((1 - clamp(J.prestigio * 0.6 + J.pop * 0.4 + ({ base: 0, portavoz: 8, direccion: 16 }[J.rol] || 0), 0, 100) / 100) * (nProv + 2));
+      const electo = nProv > 0 && posProv <= nProv || (J.rol === 'lider' && nuevos > 0);
+      const r = { electo, pos: posProv, escanos: nuevos, antes, circ: nProv };
+      J.campania = null; J.aspira = null;
+      if (electo) {
+        if (J.nivel !== 'nacional') { Pj.dejar(E, 'local'); Pj.dejar(E, 'autonomico'); J.nivel = 'nacional'; }
+        J.electo = true; Pj.log(E, `${aspira ? 'Das el salto al Congreso: ' : 'Eres reelegido/a: '}puesto ${posProv} en ${D().provincias[circ][0]} (${nProv} escaños de tu partido ahí, ${nuevos} en total).`);
+      } else { J.electo = false; Pj.log(E, `No logras escaño en las generales (puesto ${posProv} en ${D().provincias[circ][0]}; tu partido logra ${nProv} ahí).`); }
+      return r;
+    },
+
+    tras_autonomicas(E, c, previo, res) {
+      const J = E.jugador; if (!J || J.region !== c) return null;
+      const aspira = J.aspira && J.aspira.nivel === 'autonomico';
+      if (!(J.nivel === 'autonomico' || aspira || J.lidReg === c)) return null;
+      const nuevos = res.escanos[J.partido] || 0, antes = previo.escanos[J.partido] || 0;
+      const pos = J.lidReg === c || (J.rol === 'lider' && E.partidos[J.partido].amb === 'reg') ? 1 : Pj.posicion(E, J, antes, nuevos, aspira ? -6 : 8);
+      const electo = pos <= nuevos;
+      const r = { electo, pos, escanos: nuevos, antes };
       J.campania = null;
-      // Los ministros sin escaño pierden la cartera con el nuevo gobierno (se recalcula tras formar gobierno)
+      if (electo) {
+        if (J.nivel === 'local') { Pj.dejar(E, 'local'); J.nivel = 'autonomico'; }
+        J.escReg = true;
+        Pj.log(E, `${aspira ? 'Entras en el Parlamento autonómico' : 'Repites escaño autonómico'}: puesto ${pos}, ${nuevos} escaños para tu partido.`);
+      } else { J.escReg = false; Pj.log(E, `No logras escaño en el Parlamento de ${D().ccaa[c].nombre} (puesto ${pos}; ${nuevos} escaños).`); }
+      J.aspira = aspira ? null : J.aspira;
+      // Presidente del Gobierno autonómico si su partido forma gobierno y encabeza la lista
+      const rc = E.esp.ccaa[c], gob = rc.gob;
+      if (electo && gob && gob.partido === J.partido && (J.lidReg === c || E.partidos[J.partido].amb === 'reg' && E.partidos[J.partido].lider === 'J')) { gob.pres = 'J'; r.presidente = true; }
+      else if (J.consejeria === c && !(gob && gob.coalicion.includes(J.partido))) J.consejeria = null;
+      Pj.sincronizar(E);
+      return r;
+    },
+
+    tras_municipales(E, res) {
+      const J = E.jugador; if (!J || !J.muni) return null;
+      const aspira = J.aspira && J.aspira.nivel === 'local';
+      if (J.nivel !== 'local' && !aspira) { return null; }
+      const m = E.esp.muni.m[J.muni], n = m.esc[J.partido] || 0;
+      const pos = J.rol === 'lider' ? 1 : Pj.posicion(E, J, n, n, 4);
+      const electo = n > 0 && pos <= n, r = { electo, pos, escanos: n, muni: J.muni, alcalde: false };
+      J.campania = null;
+      if (m.pm === 'J' && m.alcalde !== J.partido) m.pm = null;
+      if (electo && J.rol === 'lider' && m.alcalde === J.partido) { if (m.pm && m.pm !== 'J') delete E.politicos[m.pm]; m.pm = 'J'; r.alcalde = true; Pj.log(E, `Eres investido/a alcalde/sa de ${m.nombre}.`); }
+      else if (electo) { J.concejal = true; Pj.log(E, `Eres ${J.rol === 'lider' ? 'cabeza de lista y ' : ''}concejal/a en ${m.nombre} (${n} ediles de tu partido).`); }
+      else { J.concejal = false; if (m.pm === 'J') m.pm = null; Pj.log(E, `No logras acta de concejal/a en ${m.nombre}.`); }
+      J.aspira = aspira ? null : J.aspira;
+      Pj.sincronizar(E);
       return r;
     },
 
     turno(E) {
       const J = E.jugador; if (!J) return;
       J.agenda.max = J.retirado ? 0 : Pj.maxAgenda(E); J.agenda.puntos = J.agenda.max; J.agenda.hechas = [];
-      // Cumpleaños
       const d = U.hoy(), mmdd = String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
       const ult = U.fechaDe(E.fecha.t - 1), mmdd0 = String(ult.getUTCMonth() + 1).padStart(2, '0') + '-' + String(ult.getUTCDate()).padStart(2, '0');
-      if (mmdd !== mmdd0 && mmdd >= J.cumple && mmdd0 < J.cumple) { J.edad++; }
-      // Decaimiento natural
+      if (mmdd !== mmdd0 && mmdd >= J.cumple && mmdd0 < J.cumple) J.edad++;
       J.pop = clamp(J.pop + (J.cargo === 'activista' ? -0.12 : -0.05) + (J.pop < 20 ? 0.03 : 0), 0, 100);
       J.capEU = clamp(J.capEU - 0.03, 0, 100);
       J.prestigio = clamp(J.prestigio + (12 + 8 * D().cargos[J.cargo].nivel + (J.rol === 'lider' ? 10 : 0) - J.prestigio) * 0.002, 0, 100);
+      // Campañas autonómicas y municipales
+      if (!J.campania) {
+        const rc = J.region && E.esp.ccaa[J.region], mm = E.esp.muni;
+        if (rc && (J.nivel === 'autonomico' || (J.aspira && J.aspira.nivel === 'autonomico')) && rc.parl.proxT > E.fecha.t && rc.parl.proxT - E.fecha.t <= 6) J.campania = { pts: 0, mitines: 0, tipo: 'aut' };
+        else if (J.muni && (J.nivel === 'local' || (J.aspira && J.aspira.nivel === 'local')) && mm.proxT > E.fecha.t && mm.proxT - E.fecha.t <= 6) J.campania = { pts: 0, mitines: 0, tipo: 'mun' };
+      }
+      // Equilibrio del bono de campaña regional
+      for (const c in E.esp.ccaa) { const b = E.esp.ccaa[c].bonus; if (b) for (const k in b) b[k] *= 0.985; }
       Pj.syncPol(E);
-      // Relación con diputados: se enfría lentamente
       if (E.fecha.t % 4 === 0) E.parl.miembros.forEach(i => { const m = E.politicos[i]; if (m && m.rel) m.rel *= 0.985; });
     }
   };
 
   /* ── Acciones del jugador ── */
   const A = (id, o) => C.Acciones.registrar(Object.assign({ id, costo: 1 }, o));
-  const enParl = E => Pj.enParlamento(E) || 'Necesitas un escaño en el parlamento';
+  const enParl = E => Pj.enParlamento(E) || 'Necesitas un escaño en el Congreso';
   const f = (E, ...ks) => U.suma(ks.map(k => E.jugador.atrib[k])) / (10 * ks.length);   // 0..1
   const pa = E => E.partidos[E.jugador.partido];
-  const enGob = E => E.paises[E.jugador.pais].gob.coalicion.includes(E.jugador.partido);
+  const gob = E => E.paises.ES.gob;
+  const enGob = E => gob(E).coalicion.includes(E.jugador.partido);
+  const esPM = E => E.jugador.cargo === 'pm';
+  const rcJ = E => E.esp.ccaa[E.jugador.region];
+  const muJ = E => E.esp.muni.m[E.jugador.muni];
+  const presAut = E => E.jugador.cargo === 'presauto' ? true : 'Sólo el presidente/a autonómico/a';
+  const alcalde = E => E.jugador.cargo === 'alcalde' ? true : 'Sólo el alcalde/sa';
+  const nivelAut = E => ['dipauto', 'consejero', 'presauto'].includes(E.jugador.cargo) ? true : 'Necesitas un escaño o cargo autonómico';
+  const nivelLoc = E => ['concejal', 'alcalde'].includes(E.jugador.cargo) ? true : 'Necesitas un cargo municipal';
 
+  /* — Congreso — */
   A('discurso', {
-    nombre: 'Discurso en el pleno', icono: '🎤', grupo: 'parlamento', desc: 'Una intervención en la tribuna: gana notoriedad y prestigio si te sale bien.',
+    nombre: 'Discurso en el pleno', icono: '🎤', grupo: 'parlamento', desc: 'Una intervención en la tribuna del Congreso: gana notoriedad y prestigio si te sale bien.',
     disponible: enParl,
     ejecutar(E) {
       const x = f(E, 'oratoria', 'carisma');
@@ -205,39 +332,35 @@ window.EUROPA = window.EUROPA || {};
     }
   });
   A('pregunta_control', {
-    nombre: 'Sesión de control al Gobierno', icono: '❓', grupo: 'parlamento', desc: 'Interpela al Ejecutivo. Si estás en la oposición, puede desgastarlo.',
-    disponible(E) { if (!Pj.enParlamento(E)) return 'Necesitas un escaño en el parlamento'; if (enGob(E)) return 'Tu partido está en el Gobierno'; return true; },
+    nombre: 'Sesión de control al Gobierno', icono: '❓', grupo: 'parlamento', desc: 'Pregunta a los ministros en la sesión de control de los miércoles. Si estás en la oposición, puede desgastar al Gobierno.',
+    disponible(E) { if (!Pj.enParlamento(E)) return 'Necesitas un escaño en el Congreso'; if (enGob(E)) return 'Tu partido está en el Gobierno'; return true; },
     ejecutar(E) {
-      const x = f(E, 'oratoria', 'integridad'), g = E.paises[E.jugador.pais].gob;
-      const ok = U.chance(0.35 + 0.5 * x);
-      if (ok) { g.aprob = Math.max(5, g.aprob - (0.4 + x * 0.8)); g.estab -= 0.4; Pj.cambiar(E, { pop: 1.0, prestigio: 1 }); return { ok: true, msg: 'Tu pregunta incomoda al Gobierno y abre telediarios.' }; }
+      const x = f(E, 'oratoria', 'integridad'), g = gob(E);
+      if (U.chance(0.35 + 0.5 * x)) { g.aprob = Math.max(5, g.aprob - (0.4 + x * 0.8)); g.estab -= 0.4; Pj.cambiar(E, { pop: 1.0, prestigio: 1 }); return { ok: true, msg: 'Tu pregunta incomoda al Gobierno y abre telediarios.' }; }
       Pj.cambiar(E, { prestigio: -0.3 }); return { ok: true, exito: false, msg: 'El Gobierno esquiva tu pregunta sin consecuencias.' };
     }
   });
   A('proponer_ley', {
-    nombre: 'Presentar un proyecto de ley', icono: '📜', costo: 2, grupo: 'parlamento', desc: 'Registra tu propia iniciativa legislativa.',
-    disponible(E) { const r = enParl(E); if (r !== true) return r; if (C.Parlamento.abiertos(E).filter(p => p.autor.tipo === 'jugador').length >= 2) return 'Ya tienes dos proyectos en trámite'; return true; },
+    nombre: 'Registrar una proposición de ley', icono: '📜', costo: 2, grupo: 'parlamento', desc: 'Registra tu propia iniciativa legislativa en el Congreso.',
+    disponible(E) { const r = enParl(E); if (r !== true) return r; if (C.Congreso.abiertos(E).filter(p => p.autor.tipo === 'jugador').length >= 2) return 'Ya tienes dos proyectos en trámite'; if (C.Generales.puedeDisolver && E.esp.cortes.estado !== 'activa') return 'Las Cortes no están en periodo ordinario'; return true; },
     ejecutar(E, a) {
-      const tpl = D().leyes.find(l => l.id === a.tpl); if (!tpl) return { ok: false, msg: 'Elige un proyecto' };
-      if (!C.Parlamento.reqOK(E, tpl)) return { ok: false, msg: 'No aplicable en tu país' };
-      if (C.Parlamento.abiertos(E).some(p => p.tpl === tpl.id)) return { ok: false, msg: 'Ya hay un proyecto igual en trámite' };
-      const p = C.Parlamento.proponer(E, tpl.id, { tipo: 'jugador', pid: E.jugador.partido });
-      // La posición del jugador desplaza el proyecto hacia su ideología (enmienda de autor)
-      p.eco = Math.round((p.eco * 2 + E.jugador.eco) / 3); p.soc = Math.round((p.soc * 2 + E.jugador.soc) / 3); p.eu = Math.round((p.eu * 2 + E.jugador.eu) / 3);
-      pa(E).pop = pa(E).pop;
+      const tpl = D().leyes.find(l => l.id === a.tpl); if (!tpl || tpl.manual || tpl.rdlSolo) return { ok: false, msg: 'Elige un proyecto' };
+      if (C.Congreso.abiertos(E).some(p => p.tpl === tpl.id)) return { ok: false, msg: 'Ya hay un proyecto igual en trámite' };
+      const p = C.Congreso.proponer(E, tpl.id, { tipo: 'jugador', pid: E.jugador.partido });
+      const J = E.jugador;
+      p.eco = Math.round((p.eco * 2 + J.eco) / 3); p.soc = Math.round((p.soc * 2 + J.soc) / 3); p.eu = Math.round((p.eu * 2 + J.eu) / 3); p.ter = Math.round((p.ter * 2 + J.ter) / 3);
       Pj.cambiar(E, { prestigio: 0.8, pop: 0.3 });
-      C.Noticias.poner(E, 'parlamento', `${E.jugador.nombre} (${pa(E).sigla}) registra «${p.t}».`, E.jugador.pais);
+      C.Noticias.poner(E, 'parlamento', `${J.nombre} (${pa(E).sigla}) registra «${p.t}».`, 'ES');
       return { ok: true, msg: `Registras «${p.t}».` };
     }
   });
   A('cabildear_ley', {
-    nombre: 'Cabildear un proyecto', icono: '🤝', grupo: 'parlamento', desc: 'Negocia con un grupo parlamentario para ganar sus votos.',
+    nombre: 'Cabildear un proyecto', icono: '🤝', grupo: 'parlamento', desc: 'Negocia con un grupo parlamentario para ganar o perder sus votos.',
     disponible: enParl,
     ejecutar(E, a) {
-      const p = E.proyectos[a.proy]; if (!p || !['registro', 'comision', 'pleno', 'pleno_pend'].includes(p.etapa)) return { ok: false, msg: 'Elige un proyecto en trámite' };
+      const p = E.proyectos[a.proy]; if (!p || !['registro', 'ponencia', 'pleno', 'pleno_pend', 'senado', 'vuelta'].includes(p.etapa)) return { ok: false, msg: 'Elige un proyecto en trámite' };
       const k = a.pid; if (!k || !E.partidos[k]) return { ok: false, msg: 'Elige un grupo' };
-      const x = f(E, 'negociacion', 'carisma');
-      const gana = a.lado === 'no' ? -1 : 1;
+      const x = f(E, 'negociacion', 'carisma'), gana = a.lado === 'no' ? -1 : 1;
       if (U.chance(0.45 + 0.5 * x)) {
         p.apoyo[k] = (p.apoyo[k] || 0) + gana * (0.22 + 0.2 * x);
         E.parl.miembros.forEach(i => { const m = E.politicos[i]; if (m && m.p === k && i !== 'J') m.rel = clamp(m.rel + 4, -100, 100); });
@@ -246,11 +369,201 @@ window.EUROPA = window.EUROPA || {};
       return { ok: true, exito: false, msg: `${E.partidos[k].sigla} no se deja convencer.` };
     }
   });
+  A('mocion_censura', {
+    nombre: 'Presentar una moción de censura', icono: '⚡', costo: 3, grupo: 'nacional', desc: 'Sólo líderes de la oposición: la moción es constructiva, necesita 176 votos y propone un candidato alternativo.',
+    disponible(E) { const J = E.jugador; if (J.rol !== 'lider') return 'Sólo el líder de un partido puede presentarla'; if (!Pj.enParlamento(E)) return 'Necesitas escaño en el Congreso'; if (enGob(E)) return 'Tu partido está en el Gobierno'; if (E.esp.cortes.estado !== 'activa') return 'Las Cortes no están en periodo ordinario'; if (E.esp.cortes.mocion) return 'Ya hay una moción en trámite'; if (E.fecha.t - (E.esp.cortes.ultMocion || -99) < 26) return 'Ya se votó otra moción hace poco'; return true; },
+    ejecutar(E) { E.ui.abrir = { tipo: 'consultas', modo: 'censura' }; return { ok: true, msg: 'Preparas una moción de censura: negocia con los grupos.' }; }
+  });
+  /* — Presidente del Gobierno y Consejo de Ministros — */
+  A('disolver_cortes', {
+    nombre: 'Disolver las Cortes (adelanto electoral)', icono: '🗳️', costo: 2, grupo: 'nacional', desc: 'Sólo el presidente del Gobierno: convoca elecciones generales anticipadas (campaña de ocho semanas).',
+    disponible(E) { if (!esPM(E)) return 'Sólo el presidente/a del Gobierno'; return C.Generales.puedeDisolver(E); },
+    ejecutar(E) { const r = C.Generales.disolver(E, 'a petición del presidente', false); if (r !== true) return { ok: false, msg: r }; return { ok: true, msg: 'Disuelves las Cortes: elecciones generales en ocho semanas.' }; }
+  });
+  A('cuestion_confianza', {
+    nombre: 'Plantear la cuestión de confianza', icono: '🤞', costo: 2, grupo: 'nacional', desc: 'Pides al Congreso que renueve su confianza. Si la ganas, tu estabilidad sube; si la pierdes, el Gobierno cae.',
+    disponible(E) { return esPM(E) ? (E.esp.cortes.estado === 'activa' ? true : 'No es posible ahora') : 'Sólo el presidente/a del Gobierno'; },
+    ejecutar(E) { const r = C.Consejo.cuestionConfianza(E); if (r === true) { Pj.cambiar(E, { prestigio: 3 }, true); return { ok: true, msg: 'Superas la cuestión de confianza.' }; } if (r === 'derrota') { Pj.cambiar(E, { prestigio: -8 }, true); return { ok: true, exito: false, msg: 'El Congreso te niega la confianza.' }; } return { ok: false, msg: r }; }
+  });
+  A('remodelar', {
+    nombre: 'Remodelar el Gobierno', icono: '🔄', costo: 2, grupo: 'nacional', desc: 'Cambia varias carteras: refresca la imagen del Ejecutivo.',
+    disponible(E) { return esPM(E) ? true : 'Sólo el presidente/a del Gobierno'; },
+    ejecutar(E) { const r = C.Consejo.remodelar(E); return r === true ? { ok: true, msg: 'Remodelas el Gobierno.' } : { ok: false, msg: r }; }
+  });
+  A('conferencia', {
+    nombre: 'Convocar la Conferencia de Presidentes', icono: '🏛️', costo: 2, grupo: 'nacional', desc: 'Reúnes a los presidentes autonómicos: mejora la relación con las comunidades.',
+    disponible(E) { return esPM(E) ? (E.fecha.t - E.esp.confPres.ultima > 26 ? true : 'Se celebró hace menos de seis meses') : 'Sólo el presidente/a del Gobierno'; },
+    ejecutar(E) { C.Territorio.conferenciaPresidentes(E); Pj.cambiar(E, { prestigio: 1.5 }); return { ok: true, msg: 'La Conferencia de Presidentes termina con un comunicado conjunto.' }; }
+  });
+  A('visita_ccaa', {
+    nombre: 'Visitar una comunidad autónoma', icono: '🚄', grupo: 'nacional', desc: 'Presidente/a o ministro/a: mejora la relación con una comunidad y gana notoriedad allí.',
+    disponible(E) { return ['pm', 'ministro'].includes(E.jugador.cargo) ? true : 'Sólo presidente/a del Gobierno o ministros'; },
+    ejecutar(E, a) {
+      const c = a.region; if (!c || !E.esp.ccaa[c]) return { ok: false, msg: 'Elige una comunidad' };
+      const x = f(E, 'carisma', 'negociacion'); E.esp.ccaa[c].relM = clamp(E.esp.ccaa[c].relM + 2 + 3 * x, 0, 100);
+      Pj.cambiar(E, { prestigio: 0.6, pop: 0.6 }); return { ok: true, msg: `Tu visita a ${D().ccaa[c].nombre} mejora el clima con su Gobierno.` };
+    }
+  });
+  A('plan_ministerio', {
+    nombre: 'Impulsar un plan de tu ministerio', icono: '🗂️', costo: 2, grupo: 'nacional', desc: 'Ministros y presidente: mejora un indicador de tu sector.',
+    disponible(E) { return ['ministro', 'pm'].includes(E.jugador.cargo) ? true : 'Debes ser ministro/a o presidente/a del Gobierno'; },
+    ejecutar(E) {
+      const J = E.jugador, x = f(E, 'gestion', 'negociacion');
+      const m = J.cargo === 'pm' ? null : D().ministerios.find(k => k.id === J.ministerio);
+      const efs = { hac: { deficit: -0.15 }, eco: { crec: 0.06 }, tra: { paro: -0.15 }, amb: { infl: -0.1, crec: 0.05 }, sal: { aprob: 1.5 }, edu: { crec: 0.05, aprob: 1 }, agr: { aprob: 1 }, ter: { crec: 0.04 }, tpt: { crec: 0.06 }, viv: { aprob: 1.2 }, int: { aprob: 1 }, jus: { aprob: 0.8 }, ext: { aprob: 0.6 }, def: { aprob: 0.6 }, ind: { crec: 0.07 }, inc: { aprob: 1 }, dig: { crec: 0.05 }, cie: { crec: 0.04 } };
+      const ef = !m ? { crec: 0.05, aprob: 1.2 } : (efs[m.id] || { aprob: 0.8 });
+      const k = 0.6 + x, e2 = {}; for (const kk in ef) e2[kk] = ef[kk] * k;
+      C.Economia.aplicar(E, 'ES', e2);
+      Pj.cambiar(E, { prestigio: 1.5 + x * 1.5, pop: 0.8 }); if (m && m.id === 'ext') Pj.cambiar(E, { capEU: 2 });
+      return { ok: true, msg: 'Tu plan arranca con buena acogida.' };
+    }
+  });
+  A('propuesta_consejo', {
+    nombre: 'Proponer una iniciativa al Consejo de Ministros', icono: '📨', costo: 2, grupo: 'nacional', desc: 'Ministros: lleva al presidente una ley o decreto de tu área.',
+    disponible(E) { return E.jugador.cargo === 'ministro' ? true : 'Sólo ministros/as'; },
+    ejecutar(E, a) {
+      const r = C.Consejo.propuestaMinistro(E, a.tpl);
+      if (r === true) { Pj.cambiar(E, { prestigio: 2 }); return { ok: true, msg: 'El Consejo de Ministros hace suya tu iniciativa.' }; }
+      return { ok: true, exito: false, msg: r };
+    }
+  });
+  A('ultimatum', {
+    nombre: 'Presionar a tu socio de Gobierno', icono: '⚔️', costo: 2, grupo: 'nacional', desc: 'Líder de un socio de coalición: exiges una contrapartida al presidente. Si no cede, aumenta la tensión.',
+    disponible(E) { const J = E.jugador; if (J.rol !== 'lider') return 'Sólo el líder del partido'; if (!enGob(E) || esPM(E) || gob(E).partido === J.partido) return 'Sólo si diriges un socio de coalición'; return true; },
+    ejecutar(E) {
+      const cs = E.esp.consejo, g = gob(E), J = E.jugador, x = f(E, 'negociacion', 'carisma');
+      if (U.chance(0.35 + 0.4 * x)) { cs.sat[J.partido] = clamp((cs.sat[J.partido] || 50) + 10, 0, 100); const tpl = C.Congreso.elegirPlantilla(E, pa(E), null, l => !l.manual && !l.rdlSolo); if (tpl) { C.Congreso.proponer(E, tpl.id, { tipo: 'gobierno', pid: g.partido, socio: J.partido }); C.Noticias.poner(E, 'gobierno', `${pa(E).sigla} arranca al Gobierno un compromiso: «${tpl.t}».`, 'ES'); } Pj.cambiar(E, { prestigio: 2 }); return { ok: true, msg: 'El presidente cede y asume tu propuesta.' }; }
+      cs.sat[J.partido] = clamp((cs.sat[J.partido] || 50) - 6, 0, 100); g.estab -= 2; Pj.cambiar(E, { prestigio: -1 });
+      return { ok: true, exito: false, msg: 'El presidente se planta: la coalición se resiente.' };
+    }
+  });
+  A('negociar_coalicion', {
+    nombre: 'Engrasar la coalición de gobierno', icono: '⚙️', grupo: 'nacional', desc: 'Calma a los socios y refuerza la estabilidad del Ejecutivo.',
+    disponible(E) { return enGob(E) ? true : 'Tu partido no está en el Gobierno'; },
+    ejecutar(E) {
+      const x = f(E, 'negociacion', 'gestion'), g = gob(E), J = E.jugador;
+      const mult = J.rol === 'lider' || J.cargo === 'pm' ? 1.6 : J.cargo === 'ministro' ? 1.2 : 0.6;
+      g.estab = clamp(g.estab + (1.5 + 3 * x) * mult, 0, 100); E.esp.consejo.sat[J.partido] = clamp((E.esp.consejo.sat[J.partido] || 55) + 2 * mult, 0, 100); Pj.cambiar(E, { prestigio: 0.7 });
+      return { ok: true, msg: 'Las aguas se calman en el Consejo de Ministros.' };
+    }
+  });
+  /* — Comunidad autónoma — */
+  A('sesion_autonomica', {
+    nombre: 'Intervenir en el Parlamento autonómico', icono: '🏛️', grupo: 'autonomico', desc: 'Una intervención en la cámara de tu comunidad: gana notoriedad regional.',
+    disponible: nivelAut,
+    ejecutar(E) {
+      const x = f(E, 'oratoria', 'carisma');
+      if (U.chance(0.45 + 0.5 * x)) { Pj.cambiar(E, { pop: 1.3 + 2 * x, prestigio: 0.9 + 1.2 * x }); Pj.empuje(E, 0.04 + x * 0.05); return { ok: true, msg: 'Tu intervención es portada de la prensa regional.' }; }
+      Pj.cambiar(E, { pop: -0.2 }); return { ok: true, exito: false, msg: 'La sesión pasa sin pena ni gloria.' };
+    }
+  });
+  A('pedir_moncloa', {
+    nombre: 'Negociar con Moncloa', icono: '📞', costo: 2, grupo: 'autonomico', desc: 'Presidente/a autonómico/a: pide fondos, competencias o financiación al Gobierno central.',
+    disponible: presAut,
+    ejecutar(E) {
+      const rc = rcJ(E), g = gob(E), x = f(E, 'negociacion', 'carisma');
+      const afin = (g.coalicion.includes(rc.gob.partido) ? 0.25 : 0) + ((g.apoyoExterno || []).includes(rc.gob.partido) ? 0.15 : 0) + (rc.gob.partido === g.partido ? 0.15 : 0);
+      if (U.chance(clamp(0.3 + 0.4 * x + afin + (rc.relM - 50) / 300, 0.1, 0.9))) {
+        rc.relM = clamp(rc.relM + 4, 0, 100); rc.fiscal += 0.15; rc.aut = clamp(rc.aut + 1, 0, 100); rc.gob.aprob = clamp(rc.gob.aprob + 1.2, 5, 90);
+        Pj.cambiar(E, { prestigio: 1.5, pop: 1 }); return { ok: true, msg: `Moncloa accede a parte de lo que reclamas para ${D().ccaa[rc.id].nombre}.` };
+      }
+      rc.relM = clamp(rc.relM - 1, 0, 100); return { ok: true, exito: false, msg: 'El Gobierno central da largas.' };
+    }
+  });
+  A('agravio', {
+    nombre: 'Denunciar el trato del Gobierno central', icono: '📢', grupo: 'autonomico', desc: 'Confrontación pública con Madrid: calienta tu electorado, enfría la relación y alimenta el soberanismo.',
+    disponible: presAut,
+    ejecutar(E) {
+      const rc = rcJ(E), J = E.jugador;
+      rc.relM = clamp(rc.relM - 5, 0, 100); rc.gob.aprob = clamp(rc.gob.aprob + 1.5, 5, 90); Pj.empuje(E, 0.05);
+      if (D().ccaa[rc.id].indep0 > 5) rc.concesiones.push({ t: E.fecha.t, v: 0.6, d: 'Discurso de agravio' });
+      Pj.cambiar(E, { pop: 1.5, prestigio: 0.4 }); return { ok: true, msg: 'Tu discurso reivindicativo arrastra a tu electorado.' };
+    }
+  });
+  A('plan_regional', {
+    nombre: 'Aprobar un plan regional', icono: '🗂️', costo: 2, grupo: 'autonomico', desc: 'Presidente/a o consejero/a: sanidad, vivienda o empleo en tu comunidad. Sube tu aprobación.',
+    disponible(E) { return ['presauto', 'consejero'].includes(E.jugador.cargo) ? true : 'Necesitas un cargo de gobierno autonómico'; },
+    ejecutar(E) {
+      const rc = rcJ(E), x = f(E, 'gestion', 'negociacion');
+      rc.gob.aprob = clamp(rc.gob.aprob + 0.8 + 1.4 * x, 5, 90); rc.deuda = clamp(rc.deuda + 0.4, 3, 90); Pj.empuje(E, 0.03 + x * 0.04);
+      Pj.cambiar(E, { prestigio: 1.2 + x * 1.2, pop: 1 }); return { ok: true, msg: 'Tu plan regional arranca con buena acogida.' };
+    }
+  });
+  A('reforma_estatuto', {
+    nombre: 'Impulsar la reforma del Estatuto', icono: '📖', costo: 3, grupo: 'autonomico', desc: 'Presidente/a autonómico/a: tramita en el Parlamento regional una reforma estatutaria y la remite a las Cortes.',
+    disponible(E) { const r = presAut(E); if (r !== true) return r; return rcJ(E).estatuto.proceso ? 'Ya hay un proceso en marcha' : true; },
+    ejecutar(E) {
+      const r = C.Territorio.proponerEstatuto(E, E.jugador.region, { tipo: 'jugador', pid: E.jugador.partido, region: E.jugador.region });
+      if (r === true) { Pj.cambiar(E, { prestigio: 2, pop: 1 }); return { ok: true, msg: 'La reforma estatutaria parte hacia las Cortes Generales.' }; }
+      return { ok: false, msg: r };
+    }
+  });
+  A('adelanto_autonomico', {
+    nombre: 'Convocar elecciones autonómicas anticipadas', icono: '🗳️', costo: 2, grupo: 'autonomico', desc: 'Presidente/a autonómico/a: disuelve el Parlamento regional (comicios en siete semanas).',
+    disponible(E) { const r = presAut(E); if (r !== true) return r; const rc = rcJ(E); if (rc.parl.proxT - E.fecha.t < 14) return 'Las elecciones están ya muy cerca'; if (E.fecha.t - rc.parl.ult < 52) return 'Hace menos de un año de las anteriores'; return true; },
+    ejecutar(E) { C.Territorio.adelantar(E, E.jugador.region, 'a petición del presidente'); return { ok: true, msg: 'Disuelves el Parlamento: elecciones autonómicas en siete semanas.' }; }
+  });
+  A('consulta', {
+    nombre: 'Convocar una consulta de autodeterminación', icono: '🗳️', costo: 3, grupo: 'autonomico', desc: 'Sólo en Cataluña con un Gobierno soberanista y apoyo social ≥ 40 %: desafío al Estado (unilateral).',
+    disponible(E) { const r = presAut(E); if (r !== true) return r; const rc = rcJ(E); if (rc.id !== 'CAT') return 'Sólo disponible en Cataluña'; if (!rc.gob.coalicion.some(k => E.partidos[k].indep >= 0.8)) return 'Tu Gobierno no es soberanista'; if (rc.indep < 40) return 'Apoyo social insuficiente (40 %+)'; if (E.esp.proces.fase !== 'distension' && E.esp.proces.fase !== 'tension') return 'Ya hay un proceso en curso'; return true; },
+    ejecutar(E) { C.Territorio.procesFase(E, 'unilateral', 'El Parlament aprueba convocar un referéndum unilateral de independencia.'); E.esp.proces.limite = E.fecha.t + 6; E.esp.proces.decidir = true; Pj.cambiar(E, { pop: 3, prestigio: 2 }, true); return { ok: true, msg: 'Lanzas el desafío: el Estado deberá responder.' }; }
+  });
+  /* — Ayuntamiento — */
+  A('pleno_municipal', {
+    nombre: 'Intervenir en el pleno municipal', icono: '🏘️', grupo: 'local', desc: 'Una intervención en el ayuntamiento: gana notoriedad local.',
+    disponible: nivelLoc,
+    ejecutar(E) {
+      const x = f(E, 'oratoria', 'carisma');
+      if (U.chance(0.45 + 0.5 * x)) { Pj.cambiar(E, { pop: 1.2 + 1.8 * x, prestigio: 0.7 + 1 * x }); Pj.empuje(E, 0.04); return { ok: true, msg: 'La prensa local recoge tu intervención.' }; }
+      Pj.cambiar(E, { pop: -0.2 }); return { ok: true, exito: false, msg: 'Pasa desapercibida.' };
+    }
+  });
+  A('ordenanza', {
+    nombre: 'Aprobar una ordenanza o plan municipal', icono: '🏙️', costo: 2, grupo: 'local', desc: 'Alcalde/sa: vivienda, movilidad, seguridad, turismo… Mejora la aprobación municipal.',
+    disponible: alcalde,
+    ejecutar(E, a) {
+      const m = muJ(E), x = f(E, 'gestion', 'negociacion'), tipo = a.tipo || 'obras';
+      const d = { vivienda: [2.2, 0.8], movilidad: [1.6, 0.4], seguridad: [1.6, 0.2], turismo: [1.2, -0.4], limpieza: [1.4, 0.2], obras: [1.8, 1.2], cultura: [1.0, 0.3] }[tipo] || [1.2, 0.5];
+      m.aprob = clamp(m.aprob + d[0] * (0.6 + x), 10, 90); m.deuda = clamp(m.deuda + d[1], 5, 150); m.tension = clamp(m.tension - d[0], 0, 100);
+      Pj.empuje(E, 0.03 + x * 0.04); Pj.cambiar(E, { prestigio: 1 + x, pop: 1.2 });
+      return { ok: true, msg: `Tu ${tipo === 'obras' ? 'plan de obras' : 'ordenanza de ' + tipo} gusta en ${m.nombre}.` };
+    }
+  });
+  A('pacto_municipal', {
+    nombre: 'Atar el pacto de gobierno municipal', icono: '🤝', grupo: 'local', desc: 'Alcalde/sa o cabeza de lista: aprueba presupuestos con tus socios y evita una moción.',
+    disponible: nivelLoc,
+    ejecutar(E) { const m = muJ(E), x = f(E, 'negociacion', 'carisma'); m.aprob = clamp(m.aprob + 0.6 + x, 10, 90); Pj.cambiar(E, { prestigio: 0.8 }); return { ok: true, msg: 'Los presupuestos municipales salen adelante.' }; }
+  });
+  /* — Ascenso entre niveles — */
+  A('aspirar_lista', {
+    nombre: 'Pedir un puesto en las listas', icono: '🪜', costo: 2, grupo: 'carrera', desc: 'Aspira a dar el salto: lista autonómica (si estás en lo local) o lista a las Cortes (si estás en lo local o autonómico).',
+    disponible(E) {
+      const J = E.jugador;
+      if (Pj.esUE(E)) return 'Vuelve primero a la política española';
+      if (J.aspira) return 'Ya has pedido un puesto';
+      if (J.nivel === 'nacional') return 'Ya estás en el nivel nacional';
+      return J.prestigio >= (J.nivel === 'local' ? 28 : 40) ? true : `Necesitas prestigio ${J.nivel === 'local' ? 28 : 40}+`;
+    },
+    ejecutar(E, a) {
+      const J = E.jugador, to = a.nivel || (J.nivel === 'local' ? 'autonomico' : 'nacional');
+      if (to === 'nacional' && !J.circ) J.circ = Pj.mejorProvincia(E, J.partido, J.region);
+      if (to === 'nacional') J.circ = a.circ || J.circ || Pj.mejorProvincia(E, J.partido, J.region);
+      const x = f(E, 'negociacion', 'carisma');
+      if (U.chance(clamp(0.35 + (J.prestigio - 30) / 120 + x * 0.3 + (J.rol === 'direccion' ? 0.15 : 0), 0.2, 0.9))) { J.aspira = { nivel: to, t: E.fecha.t }; Pj.log(E, `Tu partido te incluirá en la lista ${to === 'nacional' ? 'a las Cortes por ' + D().provincias[J.circ][0] : 'autonómica de ' + D().ccaa[J.region].nombre}.`); return { ok: true, msg: 'Figurarás en la lista del partido.' }; }
+      return { ok: true, exito: false, msg: 'La dirección te pide esperar.' };
+    }
+  });
+  A('consejeria', {
+    nombre: 'Aspirar a una consejería autonómica', icono: '💼', costo: 2, grupo: 'carrera', desc: 'Si tu partido gobierna en tu comunidad (o está en el Gobierno regional), puedes entrar como consejero/a.',
+    disponible(E) { const J = E.jugador, rc = J.region && E.esp.ccaa[J.region]; if (!rc || !rc.gob) return 'Sin gobierno autonómico'; if (!rc.gob.coalicion.includes(J.partido)) return 'Tu partido no está en el Gobierno autonómico'; if (J.consejeria === J.region) return 'Ya eres consejero/a'; if (J.nivel === 'nacional') return 'Ya estás en el nivel nacional'; return J.prestigio >= 35 ? true : 'Necesitas prestigio 35+'; },
+    ejecutar(E) { const J = E.jugador; if (U.chance(0.55 + f(E, 'negociacion', 'gestion') * 0.3)) { J.consejeria = J.region; if (J.nivel === 'local') { Pj.dejar(E, 'local'); J.nivel = 'autonomico'; } Pj.sincronizar(E); return { ok: true, msg: 'Entras en el Gobierno autonómico.' }; } return { ok: true, exito: false, msg: 'El presidente prefiere otro nombre.' }; }
+  });
+  /* — Partido — */
   A('recorrer_bases', {
     nombre: 'Recorrer las agrupaciones locales', icono: '🚌', grupo: 'partido', desc: 'Visitas a militantes y sedes: prestigio interno, cohesión y militancia.',
     ejecutar(E) {
       const x = f(E, 'carisma', 'gestion'), p = pa(E);
-      Pj.cambiar(E, { prestigio: 1.0 + 1.5 * x, pop: 0.4 }); p.cohesion = clamp(p.cohesion + 0.5, 20, 99); p.militantes += U.ri(80, 400); C.Opinion.empujeJ(E, 0.03);
+      Pj.cambiar(E, { prestigio: 1.0 + 1.5 * x, pop: 0.4 }); p.cohesion = clamp(p.cohesion + 0.5, 20, 99); p.militantes += U.ri(80, 400); Pj.empuje(E, 0.03);
       return { ok: true, msg: 'Las bases te reciben con entusiasmo.' };
     }
   });
@@ -268,36 +581,51 @@ window.EUROPA = window.EUROPA || {};
     ejecutar(E) {
       const J = E.jugador, r = J.rol, req = r === 'base' ? 32 : 52, x = f(E, 'negociacion', 'carisma');
       const p = clamp((J.prestigio - req) / 40 + 0.35 + x * 0.25, 0.15, 0.9);
-      if (U.chance(p)) { J.rol = r === 'base' ? 'portavoz' : 'direccion'; Pj.log(E, `Eres nombrado/a ${D().rolesPartido[J.rol].nombre}.`); Pj.cambiar(E, { prestigio: 3 }, true); return { ok: true, msg: `Ahora eres ${D().rolesPartido[J.rol].nombre}.` }; }
+      if (U.chance(p)) { J.rol = r === 'base' ? 'portavoz' : 'direccion'; Pj.log(E, `Eres nombrado/a ${D().rolesPartido[J.rol].nombre}.`); Pj.cambiar(E, { prestigio: 3 }, true); Pj.ministroSiProcede(E); Pj.sincronizar(E); return { ok: true, msg: `Ahora eres ${D().rolesPartido[J.rol].nombre}.` }; }
       Pj.cambiar(E, { prestigio: -1 }); return { ok: true, exito: false, msg: 'La ejecutiva prefiere otro nombre por ahora.' };
     }
   });
   A('desafiar_lider', {
-    nombre: 'Desafiar al líder del partido', icono: '⚔️', costo: 3, grupo: 'partido', desc: 'Primarias o congreso: si ganas, diriges el partido (y quizá el Gobierno).',
-    disponible(E) { const J = E.jugador; if (Pj.esUE(E)) return 'Vuelve primero a la política nacional'; if (J.rol === 'lider') return 'Ya eres el líder'; if (J.rol !== 'direccion' && !(J.rol === 'portavoz' && J.prestigio > 65)) return 'Necesitas estar en la dirección del partido'; if (J.prestigio < 55) return 'Necesitas prestigio 55+'; return true; },
+    nombre: 'Desafiar al líder del partido', icono: '⚔️', costo: 3, grupo: 'partido', desc: 'Primarias o congreso federal: si ganas, diriges el partido (y quizá el Gobierno).',
+    disponible(E) { const J = E.jugador; if (Pj.esUE(E)) return 'Vuelve primero a la política española'; if (J.rol === 'lider') return 'Ya eres el líder'; if (J.rol !== 'direccion' && !(J.rol === 'portavoz' && J.prestigio > 65)) return 'Necesitas estar en la dirección del partido'; if (J.prestigio < 55) return 'Necesitas prestigio 55+'; return true; },
     ejecutar(E) {
-      const J = E.jugador, p = pa(E), P = E.paises[J.pais], g = P.gob, viejo = E.politicos[p.lider];
-      const debilidad = (p.cohesion < 60 ? 0.12 : 0) + (p.pop < p.base ? 0.1 : 0) + (g.partido === p.id && g.aprob < 35 ? 0.1 : 0);
+      const J = E.jugador, p = pa(E), g = gob(E), viejo = E.politicos[p.lider];
+      const debilidad = (p.cohesion < 60 ? 0.12 : 0) + ((p.popN || p.pop) < p.base * 0.95 ? 0.1 : 0) + (g.partido === p.id && g.aprob < 35 ? 0.1 : 0);
       const pr = clamp(0.12 + (J.prestigio - 55) / 100 + f(E, 'carisma', 'negociacion') * 0.25 + debilidad - (viejo ? viejo.a / 600 : 0), 0.05, 0.85);
       if (U.chance(pr)) {
-        if (viejo && viejo.id !== 'J') { E.parl.miembros = E.parl.miembros.filter(i => i !== viejo.id); delete E.politicos[viejo.id]; E.parl.miembros.push(C.Parlamento.nuevoDiputado(E, p.id).id); }
+        if (viejo && viejo.id !== 'J') { const ix = E.parl.miembros.indexOf(viejo.id); if (ix >= 0) E.parl.miembros[ix] = E.parl.miembros.includes('J') ? C.Congreso.nuevoDiputado(E, p.id, viejo.prov).id : E.parl.miembros[ix]; if (ix < 0 || E.parl.miembros[ix] !== viejo.id) delete E.politicos[viejo.id]; }
         p.lider = 'J'; J.rol = 'lider'; if (g.partido === p.id) g.pm = 'J';
-        Pj.cambiar(E, { prestigio: 8, pop: 3 }, true); Pj.sincronizar(E);
-        C.Noticias.poner(E, 'partido', `${J.nombre} gana el liderazgo de ${p.nombre}.`, J.pais);
+        Pj.cambiar(E, { prestigio: 8, pop: 3 }, true);
+        C.Noticias.poner(E, 'partido', `${J.nombre} gana el liderazgo de ${p.nombre}.`, 'ES');
         Pj.log(E, `Ganas el congreso y te conviertes en líder de ${p.nombre}.`);
-        if (g.partido === p.id) { C.Gobierno.repartirMinisterios(E); Pj.sincronizar(E); }
+        if (g.partido === p.id) C.Ejecutivo.repartirMinisterios(E); else Pj.ministroSiProcede(E);
+        Pj.sincronizar(E);
         return { ok: true, msg: '¡Ganas el liderazgo del partido!' };
       }
-      p.cohesion = clamp(p.cohesion - 5, 20, 99); Pj.cambiar(E, { prestigio: -8, pop: -1 }, true); J.rol = 'portavoz' === J.rol ? 'base' : (J.rol === 'direccion' && U.chance(0.4) ? 'portavoz' : J.rol);
+      p.cohesion = clamp(p.cohesion - 5, 20, 99); Pj.cambiar(E, { prestigio: -8, pop: -1 }, true); J.rol = J.rol === 'portavoz' ? 'base' : (J.rol === 'direccion' && U.chance(0.4) ? 'portavoz' : J.rol);
       return { ok: true, exito: false, msg: 'Pierdes el congreso; tu posición interna queda dañada.' };
     }
   });
+  A('liderar_region', {
+    nombre: 'Liderar el partido en tu comunidad', icono: '📍', costo: 2, grupo: 'partido', desc: 'Conviértete en cabeza de lista y presidente/a regional del partido en tu comunidad.',
+    disponible(E) { const J = E.jugador; if (E.partidos[J.partido].amb !== 'nac') return 'Tu partido es regional: lo lidera su líder'; if (!J.region) return 'Sin comunidad'; if (J.lidReg === J.region) return 'Ya lideras el partido allí'; if (J.rol === 'lider') return 'Ya lideras el partido a nivel nacional'; return J.prestigio >= 38 ? true : 'Necesitas prestigio 38+'; },
+    ejecutar(E) {
+      const J = E.jugador, rc = rcJ(E);
+      if (U.chance(clamp(0.3 + (J.prestigio - 38) / 100 + f(E, 'carisma', 'negociacion') * 0.3, 0.15, 0.85))) {
+        rc.cab[J.partido] = 'J'; J.lidReg = J.region; if (rc.gob && rc.gob.partido === J.partido) rc.gob.pres = 'J';
+        Pj.cambiar(E, { prestigio: 5 }, true); Pj.sincronizar(E); Pj.log(E, `Eres elegido/a presidente/a regional de tu partido en ${D().ccaa[J.region].nombre}.`);
+        return { ok: true, msg: 'Lideras el partido en tu comunidad.' };
+      }
+      Pj.cambiar(E, { prestigio: -3 }, true); return { ok: true, exito: false, msg: 'Pierdes el congreso regional.' };
+    }
+  });
+  /* — Medios y campaña — */
   A('entrevista', {
     nombre: 'Conceder una entrevista', icono: '📺', grupo: 'medios', desc: 'Notoriedad a cambio de riesgo de titulares incómodos.',
     ejecutar(E) {
       const x = f(E, 'carisma', 'oratoria');
       if (U.chance(0.12 + (1 - x) * 0.18)) { Pj.cambiar(E, { pop: -1.5, prestigio: -1 }); return { ok: true, exito: false, msg: 'Un desliz en directo se hace viral.' }; }
-      Pj.cambiar(E, { pop: 1.2 + 2 * x, prestigio: 0.3 }); C.Opinion.empujeJ(E, 0.02 + x * 0.04);
+      Pj.cambiar(E, { pop: 1.2 + 2 * x, prestigio: 0.3 }); Pj.empuje(E, 0.02 + x * 0.04);
       return { ok: true, msg: 'La entrevista refuerza tu perfil público.' };
     }
   });
@@ -310,53 +638,22 @@ window.EUROPA = window.EUROPA || {};
     }
   });
   A('mitin', {
-    nombre: 'Mitin de campaña', icono: '📣', costo: 2, grupo: 'campana', desc: 'Sólo en campaña: mueve votos hacia tu partido.',
-    disponible(E) { return E.jugador.campania ? true : 'Sólo disponible en las ocho semanas previas a las elecciones'; },
+    nombre: 'Mitin de campaña', icono: '📣', costo: 2, grupo: 'campana', desc: 'Sólo en campaña (generales, autonómicas o municipales): mueve votos hacia tu partido.',
+    disponible(E) { return E.jugador.campania ? true : 'Sólo disponible en las semanas previas a unas elecciones de tu nivel'; },
     ejecutar(E) {
       const J = E.jugador, x = f(E, 'carisma', 'oratoria');
       J.campania.pts += 3 + 4 * x; J.campania.mitines++; Pj.cambiar(E, { pop: 0.8 });
-      C.Opinion.empujeJ(E, 0.05 + x * 0.08, 0.1);
+      Pj.empuje(E, 0.05 + x * 0.08, 0.1);
       return { ok: true, msg: 'El mitin llena el pabellón.' };
     }
   });
-  A('negociar_coalicion', {
-    nombre: 'Engrasar la coalición de gobierno', icono: '⚙️', grupo: 'gobierno', desc: 'Calma a los socios y refuerza la estabilidad del Ejecutivo.',
-    disponible(E) { return enGob(E) ? true : 'Tu partido no está en el Gobierno'; },
-    ejecutar(E) {
-      const x = f(E, 'negociacion', 'gestion'), g = E.paises[E.jugador.pais].gob;
-      const mult = E.jugador.rol === 'lider' || E.jugador.cargo === 'pm' || E.jugador.cargo === 'presidente' ? 1.6 : E.jugador.cargo === 'ministro' ? 1.2 : 0.6;
-      g.estab = clamp(g.estab + (1.5 + 3 * x) * mult, 0, 100); Pj.cambiar(E, { prestigio: 0.7 });
-      return { ok: true, msg: 'Las aguas se calman en el Consejo de Ministros.' };
-    }
-  });
-  A('plan_ministerio', {
-    nombre: 'Impulsar un plan de tu ministerio', icono: '🗂️', costo: 2, grupo: 'gobierno', desc: 'Sólo ministros: mejora un indicador de tu sector.',
-    disponible(E) { return ['ministro', 'pm', 'presidente'].includes(E.jugador.cargo) ? true : 'Debes ser ministro/a, jefe/a de Gobierno o presidente/a'; },
-    ejecutar(E) {
-      const J = E.jugador, P = E.paises[J.pais], x = f(E, 'gestion', 'negociacion');
-      const m = J.cargo === 'pm' || J.cargo === 'presidente' ? null : D().ministerios.find(k => k.id === J.ministerio);
-      const efs = { eco: { deficit: -0.15 }, tra: { paro: -0.15 }, amb: { infl: -0.1, crec: 0.05 }, sal: { aprob: 1.5 }, edu: { crec: 0.05, aprob: 1 }, agr: { aprob: 1 }, ter: { crec: 0.06 }, int: { aprob: 1 }, jus: { aprob: 0.8 }, ext: { aprob: 0.6 }, def: { aprob: 0.6 }, eur: { aprob: 0.5 } };
-      const ef = !m ? { crec: 0.05, aprob: 1.2 } : (efs[m.id] || { aprob: 0.8 });
-      const k = 0.6 + x;
-      const e2 = {}; for (const kk in ef) e2[kk] = ef[kk] * k;
-      C.Economia.aplicar(E, J.pais, e2);
-      Pj.cambiar(E, { prestigio: 1.5 + x * 1.5, pop: 0.8 }); if (m && m.id === 'eur') Pj.cambiar(E, { capEU: 2 });
-      return { ok: true, msg: 'Tu plan arranca con buena acogida.' };
-    }
-  });
-  A('mocion_censura', {
-    nombre: 'Presentar una moción de censura', icono: '⚡', costo: 3, grupo: 'partido', desc: 'Sólo líderes de la oposición: intenta derribar al Gobierno con una mayoría alternativa.',
-    disponible(E) { const J = E.jugador, P = E.paises[J.pais]; if (J.rol !== 'lider') return 'Sólo el líder de un partido puede presentarla'; if (!Pj.enParlamento(E)) return 'Necesitas escaño'; if (P.gob.coalicion.includes(J.partido)) return 'Tu partido está en el Gobierno'; if (P.flags.leyMarcial) return 'No es posible bajo ley marcial'; return true; },
-    ejecutar(E) { E.ui.abrir = { tipo: 'consultas', modo: 'censura' }; return { ok: true, msg: 'Preparas una moción de censura: negocia con los grupos.' }; }
-  });
-  A('elecciones_anticipadas', {
-    nombre: 'Convocar elecciones anticipadas', icono: '🗳️', costo: 2, grupo: 'gobierno', desc: 'Jefe/a de Gobierno o presidente/a: disuelve el parlamento.',
-    disponible(E) { const P = E.paises[E.jugador.pais], d = D().paises[E.jugador.pais]; if (!(E.jugador.cargo === 'pm' || (E.jugador.cargo === 'presidente' && d.reg === 'semi'))) return 'Sólo el jefe/a de Gobierno (o el presidente/a en regímenes semipresidenciales) puede hacerlo'; if (P.flags.anticipada || P.flags.leyMarcial) return 'No es posible ahora'; if (C.Elecciones.semanasHasta(E, E.jugador.pais) < 14) return 'Las elecciones están ya muy cerca'; return true; },
-    ejecutar(E) { C.Elecciones.adelantar(E, E.jugador.pais, 7); return { ok: true, msg: 'Disuelves la cámara: elecciones en siete semanas.' }; }
+  A('pactar_listas', {
+    nombre: 'Tantear pactos postelectorales', icono: '🧩', grupo: 'campana', desc: 'Sondea con otros partidos la formación de gobierno: mejora tus opciones de pacto y tu imagen de moderación.',
+    disponible(E) { return E.jugador.rol === 'lider' || E.jugador.rol === 'direccion' ? true : 'Sólo líderes o dirección'; },
+    ejecutar(E) { const x = f(E, 'negociacion', 'carisma'); Pj.cambiar(E, { prestigio: 0.8 + x }); pa(E).cohesion = clamp(pa(E).cohesion + 0.3, 20, 99); return { ok: true, msg: 'Los contactos discretos allanan un posible pacto.' }; }
   });
 
   C.Personaje = Pj;
   C.Tiempo.registrar('personaje', { turno: Pj.turno }, 3);
-  /* El personaje se crea al final de la generación del mundo (tras el parlamento). */
   C.Tiempo.registrar('personaje_init', { init: Pj.init }, 60);
-})(window.EUROPA);
+})(window.ESP);

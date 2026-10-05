@@ -1,5 +1,5 @@
 /* Hemiciclo SVG genérico: cada escaño es un círculo. Sirve para el parlamento nacional, el Parlamento Europeo y los resultados. */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
   const U = C.U;
   const VOTO = { si: 'var(--si)', no: 'var(--no)', abs: 'var(--abs)', aus: 'var(--aus)', pend: '#2a3a55' };
@@ -93,4 +93,4 @@ window.EUROPA = window.EUROPA || {};
   };
   const mezcla = (a, b, t) => { const h = x => [1, 3, 5].map(i => parseInt(x.slice(i, i + 2), 16)); const A = h(a), B = h(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
   C.Hemiciclo = H;
-})(window.EUROPA);
+})(window.ESP);

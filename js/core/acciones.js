@@ -1,7 +1,7 @@
 /* Registro de acciones del jugador. Cada sistema registra las suyas; la interfaz las lista.
    accion = { id, nombre, icono, costo (puntos de agenda), grupo, disponible(E, args) → true|'motivo',
               ejecutar(E, args) → { ok, msg } } */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
   const reg = {};
   C.Acciones = {
@@ -33,4 +33,4 @@ window.EUROPA = window.EUROPA || {};
       return r;
     }
   };
-})(window.EUROPA);
+})(window.ESP);

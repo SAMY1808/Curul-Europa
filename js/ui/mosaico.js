@@ -1,5 +1,5 @@
 /* Mapa de mosaicos de Europa: cada país es una ficha en su posición aproximada. Sin dependencias geográficas. */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
   const U = C.U, esc = U.esc;
   const TW = 66, TH = 52, GAP = 5;
@@ -58,23 +58,50 @@ window.EUROPA = window.EUROPA || {};
       return `<div class="seg">${Mo.capas.map(([k, n]) => `<button ${atr}="${k}" class="${k === capa ? 'activo' : ''}">${n}</button>`).join('')}</div>`;
     },
 
-    /* Selector de país para la creación de partida (marca los elegibles). */
-    seleccion(seleccionado, filtro) {
-      const mos = C.DATA.mosaico, cols = 12, filas = 10;
-      const W = (cols - 1) * (TW + GAP), Ht = filas * (TH + GAP);
-      let s = `<svg class="graf mosaico" viewBox="0 0 ${W} ${Ht}" style="max-height:540px">`;
-      for (const id in mos) {
-        const [c, f] = mos[id], x = (c - 1) * (TW + GAP), y = f * (TH + GAP), d = C.DATA.paises[id];
-        const gris = filtro && filtro !== 'todos' && d.estado !== filtro;
-        const col = d.estado === 'ue' ? (d.euro ? COL.euro : COL.ue) : COL[d.estado];
-        const sel = seleccionado === id;
-        s += `<g class="ficha" data-pais="${id}" style="cursor:pointer" opacity="${gris ? 0.28 : 1}">
-          <rect x="${x}" y="${y}" width="${TW}" height="${TH}" rx="9" fill="${col}" stroke="${sel ? COL.jugador : '#0A111D'}" stroke-width="${sel ? 4 : 1.2}"/>
-          <text x="${x + TW / 2}" y="${y + 24}" text-anchor="middle" style="font-size:20px;fill:#fff">${d.bandera}</text>
-          <text x="${x + TW / 2}" y="${y + 43}" text-anchor="middle" style="font-size:10.5px;fill:#fff;font-weight:700">${id}</text></g>`;
+    /* ── Mapa de mosaicos de España: una ficha por circunscripción ── */
+    capasEs: [['voto', 'Generales'], ['autonomico', 'Gobierno autonómico'], ['relM', 'Relación con Moncloa'], ['indep', 'Independentismo'], ['aut', 'Autogobierno']],
+
+    colorProv(E, id, capa) {
+      const d = C.DATA.provincias[id], c = d[1], rc = E.esp.ccaa[c];
+      if (capa === 'voto') { const pr = E.esp.prov[id]; return pr ? E.partidos[pr.ganador].color : '#444'; }
+      if (capa === 'autonomico') return rc && rc.gob ? E.partidos[rc.gob.partido].color : '#444';
+      if (capa === 'relM') return escala(rc.relM, 15, 80);
+      if (capa === 'indep') { const t = U.clamp(rc.indep / 40, 0, 1), m = (x, y) => Math.round(x + (y - x) * t); return `rgb(${m(60, 232)},${m(90, 177)},${m(150, 0)})`; }
+      if (capa === 'aut') return escala(rc.aut, 40, 90);
+      return '#444';
+    },
+
+    provincias(E, capa, o = {}) {
+      const P = C.DATA.provincias, cols = 11, filas = 10, tw = 58, th = 46, gap = 4;
+      const W = cols * (tw + gap), Ht = filas * (th + gap);
+      let s = `<svg class="graf mosaico" viewBox="0 0 ${W} ${Ht}" style="max-height:${o.altoMax || 520}px">`;
+      for (const id in P) {
+        const d = P[id], x = d[4] * (tw + gap), y = d[5] * (th + gap), rc = E.esp.ccaa[d[1]], pr = E.esp.prov[id];
+        const col = Mo.colorProv(E, id, capa);
+        const propio = E.jugador && (E.jugador.circ === id && E.jugador.nivel === 'nacional');
+        const sel = o.region && o.region === d[1];
+        let tt = `<div class="tt-t">${esc(d[0])} · ${esc(C.DATA.ccaa[d[1]].nombre)}</div><div class="tt-f"><span>Diputados</span><b>${d[2]}</b></div>`;
+        if (pr) { const top = Object.keys(pr.escanos).sort((a, b) => pr.escanos[b] - pr.escanos[a]).slice(0, 4); tt += top.map(k => `<div class="tt-f"><span><i class="pto" style="background:${E.partidos[k].color}"></i> ${E.partidos[k].sigla}</span><b>${pr.escanos[k]} · ${U.d1(pr.votos[k])} %</b></div>`).join(''); }
+        tt += `<div class="tt-f"><span>Gobierno autonómico</span><b>${rc.gob ? E.partidos[rc.gob.partido].sigla : '—'}</b></div><div class="tt-f"><span>Relación con Moncloa</span><b>${Math.round(rc.relM)}</b></div><div class="tt-f"><span>Independentismo</span><b>${U.d1(rc.indep)} %</b></div>`;
+        s += `<g class="ficha" data-ccaa="${d[1]}" data-prov="${id}" data-tt="${esc(tt)}" style="cursor:pointer"><rect x="${x}" y="${y}" width="${tw}" height="${th}" rx="8" fill="${col}" stroke="${propio ? COL.jugador : sel ? '#fff' : '#0A111D'}" stroke-width="${propio || sel ? 3.4 : 1.2}"/>
+          <text x="${x + tw / 2}" y="${y + 20}" text-anchor="middle" style="font-size:12.5px;fill:#fff;font-weight:700;paint-order:stroke;stroke:rgba(0,0,0,.5);stroke-width:2px">${id}</text>
+          <text x="${x + tw / 2}" y="${y + 36}" text-anchor="middle" style="font-size:11px;fill:#fff;paint-order:stroke;stroke:rgba(0,0,0,.5);stroke-width:2px">${d[2]}</text></g>`;
       }
       return s + '</svg>';
+    },
+
+    leyendaEs(E, capa) {
+      if (capa === 'voto' || capa === 'autonomico') {
+        const ps = E.paises.ES.partidos.filter(k => E.partidos[k].amb === 'nac' || E.partidos[k].lider).filter(k => Object.values(E.esp.prov).some(p => p.ganador === k) || E.esp.nacionales.includes(k) || Object.values(E.esp.ccaa).some(c => c.gob && c.gob.partido === k));
+        return `<div class="leyenda">${ps.map(k => `<span><i style="background:${E.partidos[k].color}"></i>${E.partidos[k].sigla}</span>`).join('')}</div>`;
+      }
+      const t = { relM: [['rgb(190,70,70)', 'Tensa'], ['rgb(63,175,110)', 'Buena']], indep: [['rgb(60,90,150)', 'Bajo'], ['rgb(232,177,0)', 'Alto']], aut: [['rgb(190,70,70)', 'Menor'], ['rgb(63,175,110)', 'Mayor']] }[capa] || [];
+      return `<div class="leyenda">${t.map(([c, x]) => `<span><i style="background:${c}"></i>${x}</span>`).join('')}</div>`;
+    },
+
+    selectorEs(capa, atr = 'data-capa') {
+      return `<div class="seg">${Mo.capasEs.map(([k, n]) => `<button ${atr}="${k}" class="${k === capa ? 'activo' : ''}">${n}</button>`).join('')}</div>`;
     }
   };
   C.Mosaico = Mo;
-})(window.EUROPA);
+})(window.ESP);

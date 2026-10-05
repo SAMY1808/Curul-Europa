@@ -1,5 +1,5 @@
 /* Utilidades de interfaz: modales, toasts, tooltips, ejecución de acciones y refresco de pantalla. */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
   const U = C.U;
   const UI = {
@@ -100,4 +100,4 @@ window.EUROPA = window.EUROPA || {};
     }
   };
   C.UI = UI;
-})(window.EUROPA);
+})(window.ESP);

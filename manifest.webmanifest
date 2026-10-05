@@ -1,7 +1,7 @@
 {
-  "name": "Curul Europa",
-  "short_name": "Curul Europa",
-  "description": "Simulador político: juega con un partido de cualquier país de la UE, el Reino Unido o un candidato a la adhesión.",
+  "name": "Curul España",
+  "short_name": "Curul España",
+  "description": "Simulador político de España: comunidades autónomas, municipios, generales anticipadas, Consejo de Ministros, estatutos, independentismo y UE.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

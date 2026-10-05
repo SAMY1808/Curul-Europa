@@ -1,9 +1,9 @@
 /* Guardado: múltiples ranuras, autoguardado, exportación e importación.
    Las partidas se guardan en IndexedDB (sin el límite de ~5 MB de localStorage);
    si IndexedDB no está disponible se usa localStorage. El índice de partidas vive en localStorage. */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
-  const IDX = 'europa:indice', PREF = 'europa:partida:', DB = 'europa', STORE = 'partidas';
+  const IDX = 'espana:indice', PREF = 'espana:partida:', DB = 'espana', STORE = 'partidas';
   const leerIndice = () => { try { return JSON.parse(localStorage.getItem(IDX)) || []; } catch (e) { return []; } };
   const escribirIndice = arr => { try { localStorage.setItem(IDX, JSON.stringify(arr)); } catch (e) { console.warn(e); } };
 
@@ -32,7 +32,7 @@ window.EUROPA = window.EUROPA || {};
   const G = {
     listar: () => leerIndice().sort((a, b) => b.guardado - a.guardado),
     resumen(E, id, nombre) {
-      return { id, nombre: nombre || E.meta.nombrePartida, jugador: E.jugador.nombre, cargo: C.Personaje.cargoTxt(E), pais: C.DATA.paises[E.jugador.pais].nombre, bandera: C.DATA.paises[E.jugador.pais].bandera,
+      return { id, nombre: nombre || E.meta.nombrePartida, jugador: E.jugador.nombre, cargo: C.Personaje.cargoTxt(E), pais: 'España', bandera: '🇪🇸',
                fecha: C.U.fmtT(E.fecha.t), guardado: Date.now(), version: E.meta.version, auto: !!E.meta.autoSlot };
     },
     /* Devuelve una promesa {ok, msg, id} */
@@ -69,7 +69,7 @@ window.EUROPA = window.EUROPA || {};
       const blob = new Blob([JSON.stringify(E)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'europa-' + E.jugador.nombre.replace(/\s+/g, '_') + '-' + C.U.fechaDe(E.fecha.t).toISOString().slice(0, 10) + '.json';
+      a.download = 'espana-' + E.jugador.nombre.replace(/\s+/g, '_') + '-' + C.U.fechaDe(E.fecha.t).toISOString().slice(0, 10) + '.json';
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     },
@@ -88,4 +88,4 @@ window.EUROPA = window.EUROPA || {};
   };
   C.Guardado = G;
   C.Tiempo.registrar('guardado', G, 99);
-})(window.EUROPA);
+})(window.ESP);

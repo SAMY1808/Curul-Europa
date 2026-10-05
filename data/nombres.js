@@ -1,7 +1,7 @@
 /* Nombres ficticios por ámbito lingüístico: [nombres masculinos, nombres femeninos, apellidos]. */
-window.EUROPA = window.EUROPA || {};
-EUROPA.DATA = EUROPA.DATA || {};
-EUROPA.DATA.nombres = {
+window.ESP = window.ESP || {};
+ESP.DATA = ESP.DATA || {};
+ESP.DATA.nombres = {
   es: [['Javier','Carlos','Miguel','Álvaro','Sergio','Andrés','Iván','Pablo','Rafael','Jorge','Luis','Adrián'], ['Lucía','María','Elena','Carmen','Paula','Marta','Inés','Rosa','Beatriz','Irene','Nuria','Sara'], ['García','Martínez','López','Sánchez','Romero','Navarro','Ortega','Vidal','Castillo','Herrera','Molina','Prieto','Cabrera','Soler']],
   pt: [['João','Pedro','Rui','Tiago','Miguel','Nuno','Hugo','André'], ['Ana','Inês','Marta','Sofia','Catarina','Rita','Joana','Beatriz'], ['Silva','Ferreira','Costa','Teixeira','Carvalho','Mendes','Lopes','Rocha','Monteiro','Coelho']],
   fr: [['Jean','Pierre','Antoine','Thomas','Julien','Nicolas','Mathieu','Olivier'], ['Camille','Claire','Sophie','Isabelle','Léa','Margaux','Hélène','Aurélie'], ['Martin','Bernard','Dubois','Moreau','Laurent','Fontaine','Girard','Lefèvre','Mercier','Roux','Vidal','Perrin']],
@@ -21,6 +21,9 @@ EUROPA.DATA.nombres = {
   sk: [['Peter','Martin','Juraj','Michal','Marek','Ján','Roman','Branislav'], ['Jana','Mária','Zuzana','Lenka','Katarína','Eva','Silvia','Monika'], ['Horváth','Kováč','Varga','Tóth','Nagy','Baláž','Szabó','Molnár','Lukáč','Hudák']],
   en: [['James','Oliver','Thomas','William','Harry','George','Edward','Daniel'], ['Emma','Charlotte','Sophie','Hannah','Eleanor','Rebecca','Olivia','Alice'], ['Smith','Taylor','Brown','Wilson','Evans','Thompson','Walker','Robinson','Wright','Hughes','Clarke','Bennett']],
   ga: [['Seán','Cian','Darragh','Conor','Eoin','Fintan','Niall','Pádraig'], ['Aoife','Niamh','Siobhán','Orla','Róisín','Clíodhna','Gráinne','Ciara'], ['Murphy','Kelly','O\'Brien','Walsh','Ryan','Byrne','Doyle','Kavanagh','Gallagher','Brennan']],
+  cat: [['Jordi','Marc','Pau','Oriol','Joan','Albert','Ferran','Xavier'], ['Montserrat','Núria','Laia','Marta','Carme','Anna','Meritxell','Mireia'], ['Puig','Ferrer','Serra','Vila','Soler','Roca','Pons','Vidal','Camps','Font','Mas']],
+  eus: [['Iñigo','Unai','Aitor','Josu','Mikel','Gorka','Xabier','Asier'], ['Amaia','Itziar','Maite','Nerea','Ainhoa','Garazi','Leire','Idoia'], ['Etxeberria','Goikoetxea','Aguirre','Zubiria','Urrutia','Ibarra','Arana','Olaizola','Gorostiza','Lasa']],
+  gal: [['Xosé','Brais','Anxo','Xoán','Breogán','Manuel','Suso','Antón'], ['Uxía','Noa','Xiana','Carme','Rosalía','Antía','Iria','Lara'], ['Fernández','Rodríguez','Pereira','Seoane','Lorenzo','Varela','Castro','Souto','Piñeiro','Barreiro']],
   mt: [['Joseph','Mario','Charles','Anthony','Karl','Ryan','Matthew','Kurt'], ['Maria','Josephine','Rita','Claudia','Miriam','Doreen','Sandra','Lara'], ['Borg','Camilleri','Vella','Farrugia','Zammit','Galea','Micallef','Grech','Attard','Spiteri']],
   tr: [['Mehmet','Ahmet','Mustafa','Emre','Murat','Hakan','Kerem','Burak'], ['Ayşe','Fatma','Elif','Zeynep','Selin','Derya','Merve','Esra'], ['Yılmaz','Kaya','Demir','Şahin','Çelik','Aydın','Öztürk','Arslan','Doğan','Koç']],
   uk: [['Oleksandr','Andriy','Taras','Mykola','Serhiy','Dmytro','Vasyl','Bohdan'], ['Olena','Iryna','Oksana','Kateryna','Natalia','Yulia','Svitlana','Daryna'], ['Shevchenko','Kovalenko','Bondarenko','Tkachenko','Kravchenko','Melnyk','Boyko','Lysenko','Savchenko','Polishchuk']],
@@ -31,8 +34,8 @@ EUROPA.DATA.nombres = {
   mk: [['Aleksandar','Stefan','Darko','Goran','Igor','Vlatko','Ljupco','Zoran'], ['Marija','Ana','Elena','Biljana','Violeta','Tatjana','Katerina','Sandra'], ['Stojanovski','Petrovski','Dimitrovski','Ilievski','Trajkovski','Angelovski','Nikolovski','Jovanovski']]
 };
 /* Ámbito lingüístico de cada país */
-EUROPA.DATA.idiomaNombres = {
-  DE: 'de', FR: 'fr', IT: 'it', ES: 'es', PL: 'pl', RO: 'ro', NL: 'nl', BE: 'nl', EL: 'el', CZ: 'cz', SE: 'nord', PT: 'pt', HU: 'hu',
+ESP.DATA.idiomaNombres = {
+  DE: 'de', FR: 'fr', IT: 'it', ES: 'es', CAT: 'cat', PVA: 'eus', NAV: 'eus', GAL: 'gal', PL: 'pl', RO: 'ro', NL: 'nl', BE: 'nl', EL: 'el', CZ: 'cz', SE: 'nord', PT: 'pt', HU: 'hu',
   AT: 'de', BG: 'bg', DK: 'nord', FI: 'nord', SK: 'sk', IE: 'ga', HR: 'hr', LT: 'bal', SI: 'sl', LV: 'bal', EE: 'bal', CY: 'el', LU: 'fr',
   MT: 'mt', UK: 'en', TR: 'tr', UA: 'uk', RS: 'sr', AL: 'sq', BA: 'sr', MK: 'mk', ME: 'sr', MD: 'ro2', GE: 'ka'
 };

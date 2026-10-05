@@ -1,5 +1,5 @@
 /* Mundo: generación procedural (semilla) de los 37 países, sus partidos y líderes. */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
   const U = C.U;
   const D = () => C.DATA;
@@ -25,7 +25,7 @@ window.EUROPA = window.EUROPA || {};
       const id = o.id || U.id('p');
       const p = {
         id, n: pers.n, g: pers.g, e: o.e || U.ri(34, 66), pais: o.pais, p: o.partido,
-        eco: Math.round(U.clamp(o.eco || 0, -100, 100)), soc: Math.round(U.clamp(o.soc || 0, -100, 100)), eu: Math.round(U.clamp(o.eu || 0, -100, 100)),
+        eco: Math.round(U.clamp(o.eco || 0, -100, 100)), ter: Math.round(U.clamp(o.ter || 0, -100, 100)), soc: Math.round(U.clamp(o.soc || 0, -100, 100)), eu: Math.round(U.clamp(o.eu || 0, -100, 100)),
         d: Math.round(U.clamp(o.d != null ? o.d : U.gauss(72, 14), 10, 99)),   // disciplina
         a: Math.round(U.clamp(o.a != null ? o.a : U.gauss(55, 20), 5, 99)),    // ambición
         pr: Math.round(U.clamp(o.pr != null ? o.pr : U.gauss(50, 18), 5, 99)), // pragmatismo
@@ -42,8 +42,8 @@ window.EUROPA = window.EUROPA || {};
       for (const id in D().paises) {
         const d = D().paises[id];
         const P = E.paises[id] = { id, estado: d.estado, euro: d.euro, meps: d.meps, partidos: [], ec: null, elec: { ultima: null, proxT: 0 }, gob: null, escanos: {}, ue: { rel: 50, progreso: d.candidato ? d.candidato.progreso : 0, ritmo: d.candidato ? d.candidato.ritmo : 0, congelada: !!(d.candidato && d.candidato.congelada), clusters: 0 }, flags: {} };
-        const lista = D().partidos[id].slice();
-        if (op.pais === id && op.nuevo) lista.push([op.nuevo.nombre, op.nuevo.sigla, op.nuevo.arq || 'cen', op.nuevo.apoyo || 2.2, op.nuevo]);
+        const lista = id === 'ES' ? [] : D().partidos[id].slice();
+        if (op.pais === id && op.nuevo && id !== 'ES') lista.push([op.nuevo.nombre, op.nuevo.sigla, op.nuevo.arq || 'cen', op.nuevo.apoyo || 2.2, op.nuevo]);
         const pops = lista.map(l => l[3] * (1 + U.gauss(0, 0.07)));
         const tot = U.suma(pops);
         const usados = {};
@@ -103,4 +103,4 @@ window.EUROPA = window.EUROPA || {};
 
   C.Mundo = M;
   C.Tiempo.registrar('mundo', M, 1);
-})(window.EUROPA);
+})(window.ESP);

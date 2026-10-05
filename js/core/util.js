@@ -1,9 +1,9 @@
 /* Utilidades generales: RNG con semilla, matemáticas, formato, fechas. */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
   const U = {};
 
-  /* ── RNG reproducible (mulberry32). El estado vive en EUROPA.E.meta.rng para que se guarde. ── */
+  /* ── RNG reproducible (mulberry32). El estado vive en ESP.E.meta.rng para que se guarde. ── */
   let rngLocal = 123456789;
   U.sembrar = s => { rngLocal = s >>> 0; if (C.E) C.E.meta.rng = rngLocal; };
   U.r = () => {
@@ -38,7 +38,11 @@ window.EUROPA = window.EUROPA || {};
   U.agrupar = (arr, f) => arr.reduce((m, x) => { const k = f(x); (m[k] = m[k] || []).push(x); return m; }, {});
   U.contar = (arr, f) => arr.reduce((m, x) => { const k = f(x); m[k] = (m[k] || 0) + 1; return m; }, {});
   /* Distancia ideológica normalizada 0..1 entre dos posiciones {eco,soc} */
-  U.distIdeo = (a, b) => Math.min(1, Math.hypot((a.eco - b.eco) * 1.0, (a.soc - b.soc) * 0.8, ((a.eu || 0) - (b.eu || 0)) * 0.6) / 230);
+  U.distIdeo = (a, b) => {
+    let d2 = Math.pow((a.eco - b.eco) * 1.0, 2) + Math.pow((a.soc - b.soc) * 0.8, 2) + Math.pow(((a.eu || 0) - (b.eu || 0)) * 0.6, 2), den = 230;
+    if (a.ter != null && b.ter != null) { d2 += Math.pow((a.ter - b.ter) * 0.75, 2); den = 250; }   // eje territorial (sólo España)
+    return Math.min(1, Math.sqrt(d2) / den);
+  };
 
   /* ── Identificadores ── */
   U.id = pref => { const E = C.E; E.meta.sigId = (E.meta.sigId || 0) + 1; return pref + E.meta.sigId.toString(36); };
@@ -81,4 +85,4 @@ window.EUROPA = window.EUROPA || {};
   };
 
   C.U = U;
-})(window.EUROPA);
+})(window.ESP);

@@ -1,7 +1,7 @@
 /* Eventos procedurales con decisiones. Cada evento: { id, titulo, icono, peso, cd (semanas de enfriamiento), auto (se dispara al cumplirse req),
    req(E,J,P), ctx(E,J,P) → datos serializables, texto(E,J,P,x), opciones:[{ t, ef(E,J,P,x) → texto de resultado, req? }] } */
-window.EUROPA = window.EUROPA || {};
-EUROPA.DATA = EUROPA.DATA || {};
+window.ESP = window.ESP || {};
+ESP.DATA = ESP.DATA || {};
 (function (C) {
   const U = () => C.U, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const Pj = () => C.Personaje;
@@ -9,7 +9,7 @@ EUROPA.DATA = EUROPA.DATA || {};
   const enGob = (E, J, P) => P.gob.coalicion.includes(J.partido);
   const nom = (E, id) => (E.politicos[id] ? E.politicos[id].n : 'el líder');
   const aprob = (P, d) => { P.gob.aprob = clamp(P.gob.aprob + d, 5, 90); };
-  const sectores = { diplomatico: ['ext', 'eur'], abogado: ['jus', 'int'], empresa: ['eco', 'ter'], academico: ['edu', 'sal'], sindical: ['tra', 'sal'], periodista: ['edu', 'eur'], concejal: ['ter', 'int'], activista: ['amb', 'sal'] };
+  const sectores = { diplomatico: ['ext', 'ter'], abogado: ['jus', 'int'], empresa: ['eco', 'ter'], academico: ['edu', 'sal'], sindical: ['tra', 'sal'], periodista: ['edu', 'cul'], concejal: ['ter', 'int'], activista: ['amb', 'sal'] };
   const eventos = [];
   const ev = o => eventos.push(Object.assign({ peso: 1, cd: 40 }, o));
 
@@ -164,24 +164,6 @@ EUROPA.DATA = EUROPA.DATA || {};
       { t: 'Pedir una comisión de investigación', ef: (E, J, P) => { aprob(P, -1.2); Pj().cambiar(E, { prestigio: 1.2 }); return 'La comisión se abre con fuerte repercusión mediática.'; } }
     ]
   });
-  ev({
-    id: 'referendum_pedido', titulo: 'Presión por un referéndum europeo', icono: '🗳️', peso: 0.5, cd: 100,
-    req: (E, J, P) => P.estado !== 'candidato' && E.partidos[P.partidos.slice().sort((a, b) => E.partidos[b].pop - E.partidos[a].pop).find(k => E.partidos[k].eu < -35) || J.partido].eu < -35,
-    texto: (E, J, P) => P.estado === 'ue' ? 'Los partidos euroescépticos reclaman un referéndum sobre la permanencia en la Unión Europea.' : 'Crece la presión para votar sobre la relación del país con la Unión Europea.',
-    opciones: [
-      { t: 'Respaldar la consulta', ef: (E, J) => { Pj().cambiar(E, { pop: J.eu < 0 ? 2 : -1, capEU: J.eu < 0 ? 0 : -3 }); return 'Tu apoyo alimenta el debate.'; } },
-      { t: 'Oponerte con firmeza', ef: (E, J) => { Pj().cambiar(E, { capEU: 2, prestigio: 1, pop: J.eu < 0 ? -1.5 : 0.5 }); return 'Te alineas con el consenso institucional.'; } }
-    ]
-  });
-  ev({
-    id: 'fin_ley_marcial_ua', titulo: 'Alto el fuego y fin de la ley marcial', icono: '🕊️', peso: 0, auto: true, cd: 2000,
-    req: (E, J, P) => J.pais === 'UA' && P.flags.leyMarcial && E.fecha.t > 100 && U().chance(0.01),
-    texto: () => 'Tras años de guerra, un alto el fuego estable abre la puerta a levantar la ley marcial y convocar elecciones.',
-    opciones: [
-      { t: 'Convocar elecciones', ef: (E, J, P) => { P.flags.leyMarcial = false; C.Elecciones.adelantar(E, 'UA', 22); return 'La ley marcial se levanta. Habrá elecciones.'; } },
-      { t: 'Aplazarlas un poco más', ef: (E, J, P) => { Pj().cambiar(E, { pop: -1 }); return 'La ley marcial continúa, de momento.'; } }
-    ]
-  });
 
   /* ── Europeos y de carrera ── */
   ev({
@@ -195,7 +177,7 @@ EUROPA.DATA = EUROPA.DATA || {};
   });
   ev({
     id: 'visita_oficial', titulo: 'Visita de un líder europeo', icono: '🤝', peso: 0.6,
-    req: (E, J) => J.cargo === 'pm' || J.cargo === 'presidente' || J.cargo === 'ministro' || J.rol === 'lider',
+    req: (E, J) => J.cargo === 'pm' || J.cargo === 'presauto' || J.cargo === 'ministro' || J.rol === 'lider',
     ctx: (E, J, P) => { const c = U().pick(Object.keys(E.paises).filter(x => x !== J.pais)); return { c }; },
     texto: (E, J, P, x) => `El gobierno de ${C.DATA.paises[x.c].nombre} propone una reunión bilateral para coordinar posiciones.`,
     opciones: [
@@ -231,109 +213,138 @@ EUROPA.DATA = EUROPA.DATA || {};
     ]
   });
 
-  /* ── Específicos de cada país ── */
-  const en = (...ids) => (E, J) => ids.includes(J.pais);
+
+  /* ── De España ── */
+  const rcJ = E => E.esp.ccaa[E.jugador.region], mJ = E => E.esp.muni.m[E.jugador.muni];
+  const regNom = c => C.DATA.ccaa[c].nombre;
   ev({
-    id: 'esp_consulta', titulo: 'Reclamación territorial', icono: '🗺️', peso: 1.1, cd: 90, req: en('ES'),
-    texto: () => 'Los partidos regionalistas exigen una consulta de autodeterminación y una nueva financiación autonómica a cambio de sus votos.',
+    id: 'dana', titulo: 'Gota fría e inundaciones', icono: '🌊', peso: 0.9, cd: 100,
+    ctx: (E, J) => ({ c: U().pick(['VAL', 'AND', 'MUR', 'CAT', 'CLM', 'BAL']) }),
+    texto: (E, J, P, x) => `Una DANA devastadora anega ${regNom(x.c)}: hay víctimas, miles de evacuados y una polémica sobre la gestión de la emergencia y el reparto de responsabilidades entre Estado y comunidad.`,
     opciones: [
-      { t: 'Abrir una mesa de negociación', ef: (E, J, P) => { P.gob.estab = clamp(P.gob.estab + 3, 0, 100); Pj().cambiar(E, { prestigio: 1 }); return 'La negociación calma los ánimos a corto plazo.'; } },
-      { t: 'Rechazar frontalmente cualquier consulta', ef: (E, J, P) => { P.gob.estab = clamp(P.gob.estab - 4, 0, 100); Pj().cambiar(E, { pop: J.soc > 10 ? 2 : -1 }); return 'Tu firmeza se aplaude en un lado y se critica en el otro.'; } },
-      { t: 'Proponer una reforma federal pactada', ef: (E, J) => { Pj().cambiar(E, { prestigio: 2, capEU: 1 }); return 'Tu propuesta federal abre un debate serio.'; } }
+      { t: 'Viajar a la zona y coordinar la ayuda', ef: (E, J, P, x) => { Pj().cambiar(E, { pop: 2, prestigio: 1.5 }); E.esp.ccaa[x.c].relM = clamp(E.esp.ccaa[x.c].relM + 2, 0, 100); return 'Tu presencia sobre el terreno es valorada.'; } },
+      { t: 'Exigir responsabilidades políticas', ef: (E, J, P, x) => { const rc = E.esp.ccaa[x.c]; if (rc.gob) rc.gob.aprob = clamp(rc.gob.aprob - 2.5, 5, 90); aprob(P, -0.5); Pj().cambiar(E, { pop: J.partido === (rc.gob && rc.gob.partido) ? -2 : 1.5 }); return 'La batalla política se recrudece.'; } },
+      { t: 'Pedir un plan de reconstrucción europeo', ef: (E, J) => { Pj().cambiar(E, { capEU: 2.5, prestigio: 1 }); return 'Bruselas se compromete a movilizar fondos de solidaridad.'; } }
     ]
   });
   ev({
-    id: 'uk_irlanda', titulo: 'Tensión en la frontera irlandesa', icono: '🍀', peso: 1.0, cd: 90, req: en('UK'),
-    texto: () => 'Las fricciones comerciales en el mar de Irlanda y la frontera norte amenazan el equilibrio político en Irlanda del Norte.',
+    id: 'cayucos', titulo: 'Crisis migratoria en Canarias y el Estrecho', icono: '⛴️', peso: 0.9, cd: 90,
+    texto: () => 'Cientos de embarcaciones llegan a Canarias y a las costas del Sur. Los centros de acogida de menores están desbordados y se discute el reparto entre comunidades.',
     opciones: [
-      { t: 'Pedir un acuerdo reforzado con Bruselas', ef: (E, J, P) => { P.ue.rel = clamp(P.ue.rel + 3, 0, 100); Pj().cambiar(E, { capEU: 3 }); return 'Londres y Bruselas reabren el diálogo.'; } },
-      { t: 'Defender la soberanía británica', ef: (E, J, P) => { P.ue.rel = clamp(P.ue.rel - 3, 0, 100); Pj().cambiar(E, { pop: 1.5 }); return 'Tu discurso agrada a los más soberanistas.'; } }
+      { t: 'Defender el reparto obligatorio de menores', ef: (E, J) => { Pj().cambiar(E, { prestigio: 1, pop: J.soc < 0 ? 1.5 : -1.5 }); if (E.esp.ccaa.CAN) E.esp.ccaa.CAN.relM = clamp(E.esp.ccaa.CAN.relM + 2, 0, 100); return 'Tu postura marca el debate.'; } },
+      { t: 'Exigir control de fronteras y cooperación con Marruecos', ef: (E, J) => { Pj().cambiar(E, { pop: J.soc > 10 ? 2 : -0.5, capEU: 1 }); C.Opinion.empujeES && C.Opinion.empujeES(E, 'ES_VAP', 0.04); return 'Sitúas la seguridad fronteriza en el centro.'; } },
+      { t: 'Reclamar solidaridad europea', ef: (E, J) => { Pj().cambiar(E, { capEU: 3, prestigio: 1 }); return 'La Comisión ofrece apoyo a Frontex y a Canarias.'; } }
     ]
   });
   ev({
-    id: 'fondos_bloqueados', titulo: 'Fondos europeos congelados', icono: '🔒', peso: 1.0, cd: 120, req: en('HU', 'PL', 'RO', 'SK', 'BG'),
-    texto: () => 'La Comisión congela miles de millones de euros por dudas sobre la independencia judicial y la gestión de los fondos.',
+    id: 'apagon', titulo: 'Gran apagón eléctrico', icono: '🔌', peso: 0.6, cd: 160,
+    texto: () => 'Un cero eléctrico paraliza la península durante horas. Se multiplican las acusaciones cruzadas entre el Gobierno, las eléctricas y las comunidades.',
     opciones: [
-      { t: 'Reclamar que se levante la sanción', ef: (E, J, P) => { Pj().cambiar(E, { pop: 1.5, capEU: -2 }); P.ue.rel = clamp(P.ue.rel - 2, 0, 100); return 'Tu protesta cuaja entre los votantes soberanistas.'; } },
-      { t: 'Exigir reformas judiciales', ef: (E, J, P) => { Pj().cambiar(E, { prestigio: 2, capEU: 3 }); return 'Reclamas cumplir las condiciones de Bruselas.'; } },
-      { t: 'Culpar al Gobierno de la pérdida de fondos', ef: (E, J, P) => { aprob(P, -1.2); Pj().cambiar(E, { pop: enGob(E, J, P) ? -1 : 1.5 }); return 'El asunto domina la semana política.'; } }
+      { t: 'Exigir una auditoría independiente', ef: (E, J, P) => { Pj().cambiar(E, { prestigio: 1.5, pop: 1 }); aprob(P, -0.8); return 'La auditoría pública te da razón.'; } },
+      { t: 'Culpar a las eléctricas', ef: (E, J) => { Pj().cambiar(E, { pop: 1.5 }); return 'Aciertas con el sentir popular.'; } },
+      { t: 'Apelar a la calma y la unidad', ef: (E, J) => { Pj().cambiar(E, { prestigio: 1 }); return 'Tu tono sereno es bien recibido.'; } }
     ]
   });
   ev({
-    id: 'fr_calle', titulo: 'La calle se moviliza', icono: '🔥', peso: 1.1, cd: 80, req: en('FR', 'BE', 'EL', 'IT', 'PT'),
-    texto: () => 'Una reforma impopular desata manifestaciones multitudinarias, bloqueos y huelgas en transportes y refinerías.',
+    id: 'corrupcion_partido', titulo: 'Un caso de corrupción salpica al partido', icono: '⚖️', peso: 0.8, cd: 100,
+    req: (E, J) => J.rol !== 'base' || J.cargo !== 'activista',
+    texto: (E, J) => `La Unidad de Delitos Económicos investiga una trama de contratos en una administración gobernada por ${pa(E).sigla}. Los medios piden explicaciones a la dirección.`,
     opciones: [
-      { t: 'Apoyar las movilizaciones', ef: (E, J, P) => { const gob = enGob(E, J, P); Pj().cambiar(E, { pop: gob ? -2 : 2.5, prestigio: gob ? -2 : 1 }); aprob(P, -1); return gob ? 'Tu apoyo a la protesta incomoda a tu Gobierno.' : 'La calle te aplaude.'; } },
-      { t: 'Reclamar orden y diálogo social', ef: (E, J) => { Pj().cambiar(E, { prestigio: 1.5 }); return 'Tu llamada a la moderación es bien recibida.'; } },
-      { t: 'Exigir retirar la reforma', ef: (E, J, P) => { aprob(P, -1.5); P.gob.estab = clamp(P.gob.estab - 3, 0, 100); Pj().cambiar(E, { pop: 1.5 }); return 'El Gobierno vacila ante la presión.'; } }
+      { t: 'Pedir la suspensión de militancia de los implicados', ef: (E, J) => { Pj().cambiar(E, { prestigio: 2, pop: 1 }); pa(E).cohesion = clamp(pa(E).cohesion - 2, 20, 99); return 'Marcas distancias con los corruptos; tensión interna.'; } },
+      { t: 'Defender la honorabilidad del partido', ef: (E, J) => { Pj().cambiar(E, { pop: -2, prestigio: -1 }); C.Opinion.empuje(E, J.partido, -0.15); return 'La imagen del partido se resiente.'; } },
+      { t: 'Esperar a las decisiones judiciales', ef: (E, J) => { Pj().cambiar(E, { prestigio: 0.2 }); return 'Mantienes un perfil bajo.'; } }
     ]
   });
   ev({
-    id: 'crisis_industrial', titulo: 'Cierres industriales', icono: '🏭', peso: 1.0, cd: 100, req: en('DE', 'CZ', 'SK', 'HU', 'AT', 'IT', 'PL', 'RO'),
-    texto: () => 'Un gran fabricante anuncia el cierre de varias plantas por los costes energéticos y la competencia exterior. Miles de empleos están en juego.',
+    id: 'protesta_vivienda', titulo: 'Manifestación por la vivienda', icono: '🏠', peso: 1.0, cd: 80,
+    texto: () => 'Miles de personas se manifiestan en las grandes ciudades contra los precios del alquiler y la compra de vivienda.',
     opciones: [
-      { t: 'Reclamar ayudas públicas y aranceles', ef: (E, J) => { Pj().cambiar(E, { pop: 1.5, capEU: -1 }); return 'Conectas con los trabajadores afectados.'; } },
-      { t: 'Proponer una política industrial europea', ef: (E, J) => { Pj().cambiar(E, { prestigio: 2, capEU: 2 }); return 'Tu propuesta gana eco en Bruselas.'; } },
-      { t: 'Pedir menos regulación y energía barata', ef: (E, J) => { Pj().cambiar(E, { prestigio: 1, pop: J.eco > 20 ? 1.5 : -0.5 }); return 'Tu receta divide al Parlamento.'; } }
+      { t: 'Apoyar la regulación del alquiler', ef: (E, J, P) => { Pj().cambiar(E, { pop: J.eco < 20 ? 2 : -1, prestigio: 0.8 }); return 'Tu apoyo gana adeptos entre los jóvenes.'; } },
+      { t: 'Defender más oferta y menos trabas', ef: (E, J) => { Pj().cambiar(E, { pop: J.eco > 10 ? 1.5 : -1.5, prestigio: 0.5 }); return 'Propones liberar suelo y acelerar licencias.'; } },
+      { t: 'Proponer un pacto de Estado por la vivienda', ef: (E, J) => { Pj().cambiar(E, { prestigio: 2 }); return 'Tu propuesta abre un debate transversal.'; } }
     ]
   });
   ev({
-    id: 'tension_egeo', titulo: 'Tensión en el Egeo y Chipre', icono: '⚓', peso: 1.0, cd: 100, req: en('EL', 'CY', 'TR'),
-    texto: () => 'Un incidente naval y las prospecciones energéticas reavivan la disputa marítima entre Atenas, Nicosia y Ankara.',
+    id: 'oferta_consejeria', titulo: 'Una consejería en el gobierno autonómico', icono: '💼', peso: 0, auto: true, cd: 100,
+    req: (E, J) => J.nivel !== 'nacional' && !!J.region && J.cargo !== 'presauto' && J.cargo !== 'consejero' && !!E.esp.ccaa[J.region].gob && E.esp.ccaa[J.region].gob.coalicion.includes(J.partido) && J.prestigio >= 34 && J.rol !== 'base' && E.fecha.t % 3 === 0,
+    texto: (E, J) => `El presidente de ${regNom(J.region)} te ofrece entrar en su Gobierno como consejero/a. Tendrías competencias y presupuesto propios.`,
     opciones: [
-      { t: 'Pedir respaldo diplomático de la UE', ef: (E, J) => { Pj().cambiar(E, { capEU: 3, pop: 1 }); return 'Bruselas se pronuncia a tu favor.'; } },
-      { t: 'Llamar a la desescalada y al diálogo', ef: (E, J) => { Pj().cambiar(E, { prestigio: 2 }); return 'Tu moderación contrasta con la tensión del momento.'; } },
-      { t: 'Reforzar la presencia militar', ef: (E, J) => { Pj().cambiar(E, { pop: 2, capEU: -1 }); return 'Tu firmeza agrada a los más nacionalistas.'; } }
+      { t: 'Aceptar la consejería', ef: (E, J) => { J.consejeria = J.region; if (J.nivel === 'local') { Pj().dejar(E, 'local'); J.nivel = 'autonomico'; } Pj().cambiar(E, { prestigio: 5, pop: 2 }, true); Pj().sincronizar(E); return 'Tomas posesión como consejero/a.'; } },
+      { t: 'Seguir donde estás', ef: () => 'Declinas la oferta.' }
     ]
   });
   ev({
-    id: 'balcanes_kosovo', titulo: 'Tensión en los Balcanes', icono: '🏔️', peso: 1.0, cd: 100, req: en('RS', 'AL', 'MK', 'ME', 'BA'),
-    texto: () => 'Un incidente en el norte de Kosovo y la retórica nacionalista ponen a prueba la estabilidad regional y el diálogo con Bruselas.',
+    id: 'oferta_lista', titulo: 'Un puesto en las listas', icono: '🪜', peso: 0, auto: true, cd: 120,
+    req: (E, J) => J.nivel !== 'nacional' && J.nivel !== 'europeo' && !J.aspira && J.prestigio >= (J.nivel === 'local' ? 30 : 42) && J.rol !== 'base' && E.fecha.t % 4 === 0,
+    ctx: (E, J) => ({ a: J.nivel === 'local' ? 'autonomico' : 'nacional' }),
+    texto: (E, J, P, x) => x.a === 'autonomico' ? `La dirección regional de ${pa(E).sigla} te propone ir en la lista al Parlamento de ${regNom(J.region)} en las próximas autonómicas.` : `La dirección nacional de ${pa(E).sigla} te ofrece un puesto en la lista al Congreso por ${C.DATA.provincias[J.circ || Pj().mejorProvincia(E, J.partido, J.region)][0]}.`,
     opciones: [
-      { t: 'Apoyar la mediación europea', ef: (E, J, P) => { P.ue.rel = clamp(P.ue.rel + 3, 0, 100); Pj().cambiar(E, { capEU: 3, prestigio: 1 }); return 'Tu apoyo se anota en el expediente de adhesión.'; } },
-      { t: 'Endurecer el discurso nacional', ef: (E, J, P) => { Pj().cambiar(E, { pop: 2.5, capEU: -3 }); P.ue.rel = clamp(P.ue.rel - 3, 0, 100); return 'Ganas aplausos en casa y recelo en Bruselas.'; } }
+      { t: 'Aceptar el puesto', ef: (E, J, P, x) => { J.aspira = { nivel: x.a, t: E.fecha.t }; if (x.a === 'nacional') J.circ = J.circ || Pj().mejorProvincia(E, J.partido, J.region); Pj().log(E, 'Aceptas ir en las listas del siguiente nivel.'); return 'Figurarás en la lista en las próximas elecciones.'; } },
+      { t: 'Seguir en tu cargo', ef: () => 'Te quedas donde estás.' }
     ]
   });
   ev({
-    id: 'md_transnistria', titulo: 'Presión desde Transnistria', icono: '🛢️', peso: 1.2, cd: 90, req: en('MD'),
-    texto: () => 'Cortes de gas y campañas de desinformación atribuidas a Moscú sacuden Moldavia en plena discusión sobre la adhesión.',
+    id: 'temporal_municipal', titulo: 'Un temporal golpea la ciudad', icono: '🌧️', peso: 1.0, cd: 80,
+    req: (E, J) => J.cargo === 'alcalde',
+    texto: (E, J) => `Un temporal deja calles anegadas y apagones en ${mJ(E).nombre}. Los vecinos exigen respuestas al ayuntamiento.`,
     opciones: [
-      { t: 'Pedir ayuda energética a la UE', ef: (E, J, P) => { P.ue.rel = clamp(P.ue.rel + 4, 0, 100); Pj().cambiar(E, { capEU: 3 }); return 'Bruselas moviliza ayuda de emergencia.'; } },
-      { t: 'Negociar un acuerdo energético con Moscú', ef: (E, J, P) => { P.ue.rel = clamp(P.ue.rel - 3, 0, 100); Pj().cambiar(E, { pop: 1.5, capEU: -2 }); return 'El acuerdo alivia la factura pero irrita a Bruselas.'; } }
+      { t: 'Movilizar a los servicios municipales y dar la cara', ef: (E, J) => { const m = mJ(E); m.aprob = clamp(m.aprob + 2, 10, 90); Pj().cambiar(E, { pop: 2, prestigio: 1 }); return 'Los vecinos reconocen tu gestión.'; } },
+      { t: 'Pedir ayuda a la comunidad y al Estado', ef: (E, J) => { const m = mJ(E); m.aprob = clamp(m.aprob + 0.5, 10, 90); E.esp.ccaa[J.region].relM += 0.5; Pj().cambiar(E, { prestigio: 0.8 }); return 'Llegan ayudas, aunque tarde.'; } },
+      { t: 'Culpar a la falta de inversión autonómica', ef: (E, J) => { const m = mJ(E); m.aprob = clamp(m.aprob - 1, 10, 90); Pj().cambiar(E, { pop: 0.5 }); return 'Mueves el foco, pero los vecinos quieren soluciones.'; } }
     ]
   });
   ev({
-    id: 'ge_protestas', titulo: 'Protestas en Tiflis', icono: '🇬🇪', peso: 1.2, cd: 90, req: en('GE'),
-    texto: () => 'Decenas de miles de personas protestan frente al Parlamento contra la congelación de la adhesión a la UE y la ley de agentes extranjeros.',
+    id: 'turismo_masivo', titulo: 'Protestas contra el turismo masivo', icono: '🧳', peso: 0.9, cd: 90,
+    req: (E, J) => J.cargo === 'alcalde' || J.cargo === 'concejal',
+    texto: (E, J) => `Vecinos de ${mJ(E).nombre} se manifiestan contra la masificación turística, los pisos turísticos y la subida de precios.`,
     opciones: [
-      { t: 'Unirte a la manifestación', ef: (E, J, P) => { Pj().cambiar(E, { pop: enGob(E, J, P) ? -2 : 3, capEU: 3 }); return 'Tu presencia se hace notar en las cámaras.'; } },
-      { t: 'Llamar al orden y al diálogo', ef: (E, J) => { Pj().cambiar(E, { prestigio: 1 }); return 'Tu llamada a la calma pasa desapercibida.'; } },
-      { t: 'Acusar a la oposición de alentar el caos', ef: (E, J, P) => { Pj().cambiar(E, { pop: enGob(E, J, P) ? 1 : -2, capEU: -2 }); return 'Alineas tu discurso con el oficialismo.'; } }
+      { t: 'Limitar los pisos turísticos y la ecotasa', ef: (E, J) => { mJ(E).aprob = clamp(mJ(E).aprob + 1.2, 10, 90); Pj().cambiar(E, { pop: J.eco < 25 ? 2 : -0.5, prestigio: 1 }); return 'Los vecinos aplauden; el sector turístico protesta.'; } },
+      { t: 'Defender el modelo turístico', ef: (E, J) => { mJ(E).aprob = clamp(mJ(E).aprob - 1, 10, 90); Pj().cambiar(E, { pop: J.eco > 20 ? 1 : -2 }); return 'El empresariado respira; la calle se enfada.'; } }
     ]
   });
   ev({
-    id: 'ua_ofensiva', titulo: 'Nueva ofensiva en el frente', icono: '🛡️', peso: 1.4, cd: 70, req: en('UA'),
-    texto: () => 'Una gran ofensiva rusa golpea ciudades e infraestructuras energéticas. La opinión pública exige más ayuda militar y garantías de seguridad.',
+    id: 'mocion_local', titulo: 'Moción de censura en el ayuntamiento', icono: '🏘️', peso: 0.5, cd: 120,
+    req: (E, J) => J.cargo === 'alcalde' && mJ(E).coal.length > 1,
+    texto: (E, J) => `Tus socios de gobierno y la oposición se plantean una moción de censura contra ti en ${mJ(E).nombre}.`,
     opciones: [
-      { t: 'Pedir más armas y la adhesión rápida a la UE', ef: (E, J, P) => { P.ue.rel = clamp(P.ue.rel + 3, 0, 100); Pj().cambiar(E, { capEU: 3, pop: 1.5 }); return 'Tu discurso resuena en las capitales europeas.'; } },
-      { t: 'Impulsar una movilización nacional', ef: (E, J) => { Pj().cambiar(E, { pop: 2, prestigio: 1 }); return 'Respaldas el esfuerzo de guerra.'; } },
-      { t: 'Explorar una vía diplomática', ef: (E, J) => { Pj().cambiar(E, { pop: -1.5, prestigio: 1.5, capEU: 1 }); return 'Tu propuesta de diálogo genera controversia.'; } }
+      { t: 'Negociar con los socios', ef: (E, J) => { const ok = U().chance(0.35 + J.atrib.negociacion * 0.06); if (ok) { mJ(E).aprob += 1; Pj().cambiar(E, { prestigio: 2 }); return 'Frenas la moción con un nuevo acuerdo.'; } mJ(E).pm = null; mJ(E).alcalde = mJ(E).coal[1]; Pj().dejar(E, 'local'); J.concejal = true; Pj().sincronizar(E); return 'Pierdes la alcaldía.'; } },
+      { t: 'Resistir y plantar cara', ef: (E, J) => { const ok = U().chance(0.3); if (ok) { Pj().cambiar(E, { prestigio: 3, pop: 2 }); return 'La moción fracasa.'; } mJ(E).pm = null; mJ(E).alcalde = mJ(E).coal[1] || mJ(E).alcalde; Pj().dejar(E, 'local'); J.concejal = true; Pj().sincronizar(E); return 'La moción prospera y pierdes la alcaldía.'; } }
     ]
   });
   ev({
-    id: 'baltico_sabotaje', titulo: 'Sabotaje en el mar Báltico', icono: '🌊', peso: 1.1, cd: 100, req: en('FI', 'EE', 'LV', 'LT', 'SE', 'DK', 'PL'),
-    texto: () => 'Se rompen cables submarinos y gasoductos en el Báltico y las sospechas apuntan a una flota fantasma.',
+    id: 'reclamacion_financiacion', titulo: 'Financiación autonómica', icono: '💶', peso: 1.0, cd: 100,
+    req: (E, J) => J.cargo === 'presauto',
+    texto: (E, J) => `El Ministerio de Hacienda convoca el Consejo de Política Fiscal y Financiera. ${regNom(J.region)} aporta más de lo que recibe y las comunidades se enfrentan por el reparto.`,
     opciones: [
-      { t: 'Exigir una respuesta conjunta de la OTAN y la UE', ef: (E, J) => { Pj().cambiar(E, { capEU: 3, prestigio: 1 }); return 'Tu llamada a la unidad tiene eco.'; } },
-      { t: 'Reclamar más gasto en defensa', ef: (E, J) => { Pj().cambiar(E, { pop: 1.5 }); return 'Conectas con la preocupación ciudadana.'; } }
+      { t: 'Reclamar un trato singular', ef: (E, J) => { const rc = rcJ(E); rc.relM = clamp(rc.relM - 3, 0, 100); rc.gob.aprob = clamp(rc.gob.aprob + 2, 5, 90); Pj().cambiar(E, { pop: 2.5 }); return 'Tu discurso reivindicativo conecta con tu electorado.'; } },
+      { t: 'Pactar con el Estado un modelo común', ef: (E, J) => { const rc = rcJ(E); rc.relM = clamp(rc.relM + 4, 0, 100); Pj().cambiar(E, { prestigio: 2 }); return 'Cierras un acuerdo moderado.'; } },
+      { t: 'Abandonar el Consejo (silla vacía)', ef: (E, J) => { const rc = rcJ(E); rc.relM = clamp(rc.relM - 6, 0, 100); rc.gob.aprob = clamp(rc.gob.aprob + 1, 5, 90); Pj().cambiar(E, { pop: 1.5, prestigio: -1 }); return 'Teatro político con coste institucional.'; } }
     ]
   });
   ev({
-    id: 'ba_bloqueo', titulo: 'Bloqueo institucional', icono: '🧱', peso: 1.3, cd: 90, req: en('BA'),
-    texto: () => 'Un bloque étnico paraliza las votaciones del Parlamento y retrasa las reformas exigidas por Bruselas.',
+    id: 'diada', titulo: 'Diada y manifestaciones soberanistas', icono: '🟡', peso: 0.8, cd: 52,
+    req: (E, J) => E.esp.ccaa.CAT.indep > 25 && (J.region === 'CAT' || J.cargo === 'pm' || J.rol === 'lider'),
+    texto: () => 'Cientos de miles de personas llenan las calles de Barcelona en la Diada. La reclamación de un referéndum vuelve al centro del debate.',
     opciones: [
-      { t: 'Negociar un paquete de compromisos', ef: (E, J, P) => { Pj().cambiar(E, { prestigio: 2, capEU: 2 }); P.ue.rel = clamp(P.ue.rel + 2, 0, 100); return 'El pacto abre una ventana de reformas.'; } },
-      { t: 'Acusar al bloque rival', ef: (E, J) => { Pj().cambiar(E, { pop: 1.5, prestigio: -1 }); return 'Ganas puntos entre los tuyos.'; } }
+      { t: 'Proponer diálogo y un nuevo encaje territorial', ef: (E, J) => { E.esp.ccaa.CAT.relM = clamp(E.esp.ccaa.CAT.relM + 3, 0, 100); Pj().cambiar(E, { prestigio: 1.5 }); return 'Tu oferta de diálogo recibe una respuesta cautelosa.'; } },
+      { t: 'Defender la unidad de España', ef: (E, J) => { Pj().cambiar(E, { pop: J.ter < -20 ? 2 : -1 }); E.esp.ccaa.CAT.relM = clamp(E.esp.ccaa.CAT.relM - 2, 0, 100); return 'Tu mensaje firme divide a la opinión.'; } },
+      { t: 'Pedir un referéndum pactado', ef: (E, J) => { Pj().cambiar(E, { pop: J.ter > 40 ? 2.5 : -2, prestigio: 0.5 }); return 'Tu propuesta marca la agenda.'; } }
+    ]
+  });
+  ev({
+    id: 'fondos_nextgen', titulo: 'Fondos Next Generation', icono: '🇪🇺', peso: 0.8, cd: 100,
+    texto: () => 'Bruselas desbloquea un nuevo tramo de fondos europeos. Las comunidades y los ayuntamientos pugnan por su reparto.',
+    opciones: [
+      { t: 'Reclamar un reparto transparente y equitativo', ef: (E, J) => { Pj().cambiar(E, { capEU: 2, prestigio: 1 }); return 'Tu propuesta gana apoyos en las instituciones.'; } },
+      { t: 'Pelear por más fondos para tu territorio', ef: (E, J) => { Pj().cambiar(E, { pop: 1.5 }); return 'Tu territorio recibe una parte mayor.'; } }
+    ]
+  });
+  ev({
+    id: 'juicio_politico', titulo: 'Juicio a un dirigente político', icono: '⚖️', peso: 0.7, cd: 100,
+    texto: () => 'El Tribunal Supremo juzga a un destacado dirigente político por malversación. La polarización se dispara.',
+    opciones: [
+      { t: 'Respetar la independencia judicial', ef: (E, J) => { Pj().cambiar(E, { prestigio: 1.5 }); return 'Tu posición institucional es bien valorada.'; } },
+      { t: 'Hablar de «lawfare» y persecución', ef: (E, J) => { Pj().cambiar(E, { pop: 1, prestigio: -1.5 }); pa(E).cohesion = clamp(pa(E).cohesion + 1, 20, 99); return 'Tu base se moviliza.'; } }
     ]
   });
 
@@ -365,4 +376,4 @@ EUROPA.DATA = EUROPA.DATA || {};
     efecto: E => C.Economia.choque(E, 0.5, -0.1), opciones: [{ t: 'Entendido', ef: () => '' }] });
 
   C.DATA.eventos = eventos;
-})(window.EUROPA);
+})(window.ESP);

@@ -1,5 +1,5 @@
 /* Eventos: choques globales, sucesos nacionales y decisiones de carrera del jugador. */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
   const U = C.U;
 
@@ -62,4 +62,4 @@ window.EUROPA = window.EUROPA || {};
 
   C.Eventos = Ev;
   C.Tiempo.registrar('eventos', Ev, 70);
-})(window.EUROPA);
+})(window.ESP);

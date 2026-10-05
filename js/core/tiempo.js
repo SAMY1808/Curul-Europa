@@ -1,5 +1,5 @@
 /* Motor de turnos: cada sistema registrado avanza en orden de prioridad. */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
   const sistemas = [];
   C.Tiempo = {
@@ -31,10 +31,12 @@ window.EUROPA = window.EUROPA || {};
       if (E.eventos.pendientes.length) return 'evento';
       if (E.parl && E.parl.pendienteVoto && E.parl.pendienteVoto.length) return 'voto';
       if (E.ue && E.ue.pendiente && E.ue.pendiente.length) return 'ue';
+      if (E.esp && (E.esp.pendienteInvestidura || E.esp.pendienteSocio)) return 'investidura';
+      if (E.esp && E.esp.consejo && E.jugador && E.paises.ES.gob && E.paises.ES.gob.pm === 'J' && E.esp.consejo.agenda.some(i => i.urgente)) return 'consejo';
       if (E.elecciones.nochePendiente) return 'noche';
       if (E.elecciones.presPendiente) return 'noche';
       if (E.elecciones.pePendiente) return 'noche';
       return null;
     }
   };
-})(window.EUROPA);
+})(window.ESP);

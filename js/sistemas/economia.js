@@ -1,5 +1,5 @@
 /* Economía: indicadores macro por país con choques globales, efectos de políticas y reglas fiscales europeas. */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
   const U = C.U;
   const D = () => C.DATA;
@@ -93,4 +93,4 @@ window.EUROPA = window.EUROPA || {};
 
   C.Economia = Ec;
   C.Tiempo.registrar('economia', Ec, 5);
-})(window.EUROPA);
+})(window.ESP);

@@ -1,7 +1,7 @@
 /* Instituciones: grupos del Parlamento Europeo (ficticios), ministerios, carteras de la Comisión, cargos y sectores. */
-window.EUROPA = window.EUROPA || {};
-EUROPA.DATA = EUROPA.DATA || {};
-Object.assign(EUROPA.DATA, {
+window.ESP = window.ESP || {};
+ESP.DATA = ESP.DATA || {};
+Object.assign(ESP.DATA, {
   grupos: {
     DCE: { nombre: 'Demócratas Cristianos y Conservadores Europeos', sigla: 'DCE', color: '#3B6FD4', eco: 44, soc: 28, eu: 54 },
     SPE: { nombre: 'Socialdemócratas y Progresistas Europeos', sigla: 'SPE', color: '#E0533F', eco: -42, soc: -32, eu: 48 },
@@ -30,18 +30,29 @@ Object.assign(EUROPA.DATA, {
   },
 
   ministerios: [
-    { id: 'eco', nombre: 'Economía y Hacienda', sector: 'eco', icono: '💶' },
-    { id: 'int', nombre: 'Interior', sector: 'seg', icono: '🚔' },
-    { id: 'ext', nombre: 'Asuntos Exteriores', sector: 'ext', icono: '🌐' },
-    { id: 'def', nombre: 'Defensa', sector: 'ext', icono: '🛡️' },
-    { id: 'jus', nombre: 'Justicia', sector: 'seg', icono: '⚖️' },
-    { id: 'sal', nombre: 'Sanidad', sector: 'sal', icono: '🏥' },
-    { id: 'edu', nombre: 'Educación y Cultura', sector: 'edu', icono: '🎓' },
-    { id: 'tra', nombre: 'Trabajo y Pensiones', sector: 'soc', icono: '🤝' },
-    { id: 'amb', nombre: 'Energía y Transición Ecológica', sector: 'amb', icono: '🌍' },
-    { id: 'agr', nombre: 'Agricultura y Pesca', sector: 'agr', icono: '🌾' },
-    { id: 'ter', nombre: 'Vivienda y Transportes', sector: 'ter', icono: '🏗️' },
-    { id: 'eur', nombre: 'Asuntos Europeos', sector: 'ins', icono: '🇪🇺' }
+    { id: 'pre', nombre: 'Presidencia, Justicia y Relaciones con las Cortes', sector: 'ins', icono: '🏛️', peso: 9 },
+    { id: 'hac', nombre: 'Hacienda y Función Pública', sector: 'eco', icono: '💶', peso: 10, vp: 1 },
+    { id: 'eco', nombre: 'Economía, Comercio y Empresa', sector: 'eco', icono: '📈', peso: 9 },
+    { id: 'ext', nombre: 'Asuntos Exteriores, UE y Cooperación', sector: 'ext', icono: '🌐', peso: 9 },
+    { id: 'int', nombre: 'Interior', sector: 'seg', icono: '🚔', peso: 8 },
+    { id: 'ter', nombre: 'Política Territorial y Memoria Democrática', sector: 'ter', icono: '🗺️', peso: 8 },
+    { id: 'tra', nombre: 'Trabajo y Economía Social', sector: 'soc', icono: '🤝', peso: 8, vp: 2 },
+    { id: 'amb', nombre: 'Transición Ecológica y Reto Demográfico', sector: 'amb', icono: '🌍', peso: 8, vp: 3 },
+    { id: 'def', nombre: 'Defensa', sector: 'ext', icono: '🛡️', peso: 7 },
+    { id: 'jus', nombre: 'Justicia', sector: 'seg', icono: '⚖️', peso: 7 },
+    { id: 'sal', nombre: 'Sanidad', sector: 'sal', icono: '🏥', peso: 6 },
+    { id: 'edu', nombre: 'Educación, FP y Deportes', sector: 'edu', icono: '🎓', peso: 6 },
+    { id: 'tpt', nombre: 'Transportes y Movilidad Sostenible', sector: 'ter', icono: '🚆', peso: 6 },
+    { id: 'ind', nombre: 'Industria y Turismo', sector: 'eco', icono: '🏭', peso: 5 },
+    { id: 'agr', nombre: 'Agricultura, Pesca y Alimentación', sector: 'agr', icono: '🌾', peso: 5 },
+    { id: 'viv', nombre: 'Vivienda y Agenda Urbana', sector: 'ter', icono: '🏠', peso: 5 },
+    { id: 'inc', nombre: 'Inclusión, Seguridad Social y Migraciones', sector: 'soc', icono: '🛟', peso: 5 },
+    { id: 'dso', nombre: 'Derechos Sociales, Consumo y Agenda 2030', sector: 'soc', icono: '🧩', peso: 4 },
+    { id: 'cie', nombre: 'Ciencia, Innovación y Universidades', sector: 'dig', icono: '🔬', peso: 3 },
+    { id: 'dig', nombre: 'Transformación Digital', sector: 'dig', icono: '💻', peso: 3 },
+    { id: 'igu', nombre: 'Igualdad', sector: 'ins', icono: '⚧️', peso: 3 },
+    { id: 'cul', nombre: 'Cultura', sector: 'edu', icono: '🎭', peso: 2 },
+    { id: 'jov', nombre: 'Juventud e Infancia', sector: 'soc', icono: '🧒', peso: 1 }
   ],
 
   /* Cartera de la Comisión Europea (una por Estado miembro). [nombre, sector] */
@@ -57,16 +68,22 @@ Object.assign(EUROPA.DATA, {
 
   /* Cargos de carrera. nivel: peso de prestigio para decisiones y puntuación. */
   cargos: {
-    activista:  { nombre: 'Dirigente extraparlamentario', icono: '📣', nivel: 1 },
-    diputado:   { nombre: 'Diputado/a nacional', icono: '🪑', nivel: 2 },
-    ministro:   { nombre: 'Ministro/a', icono: '💼', nivel: 4 },
-    pm:         { nombre: 'Jefe/a de Gobierno', icono: '🏛️', nivel: 6 },
-    presidente: { nombre: 'Presidente/a de la República', icono: '🎖️', nivel: 7 },
-    mep:        { nombre: 'Eurodiputado/a', icono: '🇪🇺', nivel: 3 },
-    presPE:     { nombre: 'Presidente/a del Parlamento Europeo', icono: '🇪🇺', nivel: 5 },
-    comisario:  { nombre: 'Comisario/a europeo/a', icono: '🇪🇺', nivel: 5 },
-    presCE:     { nombre: 'Presidente/a del Consejo Europeo', icono: '🇪🇺', nivel: 7 },
-    presCom:    { nombre: 'Presidente/a de la Comisión Europea', icono: '🇪🇺', nivel: 7 }
+    activista:  { nombre: 'Dirigente sin cargo electo', icono: '📣', nivel: 1 },
+    concejal:   { nombre: 'Concejal/a', icono: '🏘️', nivel: 2 },
+    alcalde:    { nombre: 'Alcalde/sa', icono: '🏙️', nivel: 3 },
+    dipauto:    { nombre: 'Diputado/a autonómico/a', icono: '🏛️', nivel: 3 },
+    consejero:  { nombre: 'Consejero/a autonómico/a', icono: '💼', nivel: 4 },
+    presauto:   { nombre: 'Presidente/a autonómico/a', icono: '🎖️', nivel: 5 },
+    diputado:   { nombre: 'Diputado/a del Congreso', icono: '🪑', nivel: 4 },
+    senador:    { nombre: 'Senador/a', icono: '🏛️', nivel: 3 },
+    ministro:   { nombre: 'Ministro/a', icono: '💼', nivel: 6 },
+    vicepres:   { nombre: 'Vicepresidente/a del Gobierno', icono: '💼', nivel: 7 },
+    pm:         { nombre: 'Presidente/a del Gobierno', icono: '🇪🇸', nivel: 9 },
+    mep:        { nombre: 'Eurodiputado/a', icono: '🇪🇺', nivel: 4 },
+    comisario:  { nombre: 'Comisario/a europeo/a', icono: '🇪🇺', nivel: 7 },
+    presCE:     { nombre: 'Presidente/a del Consejo Europeo', icono: '🇪🇺', nivel: 9 },
+    presCom:    { nombre: 'Presidente/a de la Comisión Europea', icono: '🇪🇺', nivel: 9 },
+    presPE:     { nombre: 'Presidente/a del Parlamento Europeo', icono: '🇪🇺', nivel: 7 }
   },
   rolesPartido: {
     base:      { nombre: 'Militante', peso: 0 },

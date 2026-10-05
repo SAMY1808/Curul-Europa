@@ -1,19 +1,24 @@
 /* Leyes: proyectos en trámite, presentación de iniciativas, votaciones en el pleno y «¿qué pasó?». */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
   const U = C.U, UI = C.UI, esc = U.esc, D = () => C.DATA, G = C.Graf, Comp = C.Comp;
   C.Pantallas = C.Pantallas || {};
-  const ETAPAS = [['registro', 'Registro'], ['comision', 'Comisión'], ['pleno', 'Pleno'], ['fin', 'Resultado']];
+  const ETAPAS = [['registro', 'Registro'], ['ponencia', 'Comisión'], ['pleno', 'Congreso'], ['senado', 'Senado'], ['fin', 'Resultado']];
   const VT = { si: 'A favor', no: 'En contra', abs: 'Abstención', aus: 'Ausente' };
   const VTC = { si: 'verde', no: 'rojo', abs: 'amar', aus: '' };
-  const ACTIVAS = ['registro', 'comision', 'pleno', 'pleno_pend'];
+  const ACTIVAS = C.Congreso.ABIERTAS;
 
   const tramite = p => {
-    const idx = { registro: 0, comision: 1, pleno: 2, pleno_pend: 2, sancionada: 3, rechazada: 3, archivada: 3 }[p.etapa];
     const mal = p.etapa === 'rechazada' || p.etapa === 'archivada';
-    return `<div class="tramite">${ETAPAS.map(([k, n], i) => `<div class="paso ${i < idx ? 'hecha' : ''} ${i === idx ? (i === 3 ? (mal ? 'mal' : 'hecha') : 'actual') : ''}">${i === 3 ? (p.etapa === 'sancionada' ? 'Ley ✔' : mal ? (p.etapa === 'archivada' ? 'Archivada' : 'Rechazada') : 'Resultado') : n}</div>`).join('')}</div>`;
+    if (p.rdl) {
+      const idx = { convalidacion: 1, convalidacion_pend: 1, sancionada: 2, rechazada: 2, archivada: 2 }[p.etapa];
+      const T = [['rdl', 'Decreto-ley en vigor'], ['conv', 'Convalidación (30 días)'], ['fin', 'Resultado']];
+      return `<div class="tramite">${T.map(([k, n], i) => `<div class="paso ${i < idx ? 'hecha' : ''} ${i === idx ? (i === 2 ? (mal ? 'mal' : 'hecha') : 'actual') : ''}">${i === 2 ? (p.etapa === 'sancionada' ? 'Convalidado ✔' : mal ? 'Derogado' : 'Resultado') : n}</div>`).join('')}</div>`;
+    }
+    const idx = { registro: 0, ponencia: 1, pleno: 2, pleno_pend: 2, senado: 3, vuelta: 3, vuelta_pend: 3, sancionada: 4, rechazada: 4, archivada: 4 }[p.etapa];
+    return `<div class="tramite">${ETAPAS.map(([k, n], i) => `<div class="paso ${i < idx ? 'hecha' : ''} ${i === idx ? (i === 4 ? (mal ? 'mal' : 'hecha') : 'actual') : ''}">${i === 4 ? (p.etapa === 'sancionada' ? 'Ley ✔' : mal ? (p.etapa === 'archivada' ? 'Archivada' : 'Rechazada') : 'Resultado') : (i === 3 && p.etapa.startsWith('vuelta') ? (p.veto ? 'Veto: vuelta' : 'Enmiendas') : n)}</div>`).join('')}</div>`;
   };
-  const autorTxt = (E, p) => p.autor.tipo === 'gobierno' ? 'Gobierno' : p.autor.tipo === 'ue' ? 'Obligación europea' : p.autor.tipo === 'jugador' ? '<b class="oro">Tu proyecto</b>' : (p.autor.pid && E.partidos[p.autor.pid] ? E.partidos[p.autor.pid].sigla : 'Diputados');
+  const autorTxt = (E, p) => p.autor.tipo === 'territorio' ? 'Parlamento autonómico' : p.autor.tipo === 'gobierno' ? (p.rdl ? 'Real decreto-ley del Gobierno' : 'Gobierno') : p.autor.tipo === 'ue' ? 'Obligación europea' : p.autor.tipo === 'jugador' ? '<b class="oro">Tu proyecto</b>' : (p.autor.pid && E.partidos[p.autor.pid] ? E.partidos[p.autor.pid].sigla : 'Diputados');
   const sec = s => D().sectores[s] || { nombre: s, icono: '📄' };
 
   const L = C.Pantallas.leyes = {
@@ -23,7 +28,7 @@ window.EUROPA = window.EUROPA || {};
       E.ui.tabLeyes = tab;
       const tr = Object.values(E.proyectos).filter(p => ACTIVAS.includes(p.etapa)).sort((a, b) => (b.autor.tipo === 'jugador') - (a.autor.tipo === 'jugador') || b.t0 - a.t0);
       const hist = Object.values(E.proyectos).filter(p => !ACTIVAS.includes(p.etapa)).sort((a, b) => b.tEtapa - a.tEtapa).slice(0, 40);
-      el.innerHTML = `<div class="cab"><div><h1>Leyes</h1><div class="sub">${esc(D().paises[E.jugador.pais].cam)} · ${E.parl.miembros.length} escaños · ${C.Parlamento.enRecesion(E) ? '<span class="tenue">receso parlamentario</span>' : '<span class="bien">en sesiones</span>'}</div></div>
+      el.innerHTML = `<div class="cab"><div><h1>Leyes</h1><div class="sub">Congreso de los Diputados · 350 escaños · ${E.esp.cortes.estado !== 'activa' ? '<span class="alerta">Cortes sin actividad legislativa ordinaria</span>' : C.Congreso.enRecesion(E) ? '<span class="tenue">receso parlamentario</span>' : '<span class="bien">en sesiones</span>'}</div></div>
         <div class="fila"><label class="tenue" style="font-size:12px"><input type="checkbox" id="l-auto" ${E.parl.auto ? 'checked' : ''}> Votar automáticamente con mi grupo</label></div></div>
         ${E.parl.pendienteVoto.length ? `<div class="nota" style="border-color:var(--oro);margin-bottom:12px">🗳 Tienes <b>${E.parl.pendienteVoto.length}</b> votación(es) pendientes. <button class="btn chico prim" id="l-votar">Votar ahora</button></div>` : ''}
         <div class="tabs"><button data-tab="tramite" class="${tab === 'tramite' ? 'activo' : ''}">En trámite (${tr.length})</button><button data-tab="proponer" class="${tab === 'proponer' ? 'activo' : ''}">Presentar proyecto</button><button data-tab="historial" class="${tab === 'historial' ? 'activo' : ''}">Historial</button></div>
@@ -40,9 +45,9 @@ window.EUROPA = window.EUROPA || {};
     },
 
     fila(p) {
-      const E = C.E, pr = ACTIVAS.includes(p.etapa) ? C.Parlamento.proyectar(E, p) : null;
+      const E = C.E, pr = ACTIVAS.includes(p.etapa) ? C.Congreso.proyectar(E, p) : null;
       return `<div class="tarjeta clic" data-proy="${p.id}"><div class="fila" style="justify-content:space-between;flex-wrap:nowrap;align-items:flex-start;gap:12px">
-        <div style="min-width:0"><div class="fila" style="gap:6px"><span>${sec(p.s).icono}</span><b style="font-size:15px">${esc(p.t)}</b></div><div class="tenue" style="font-size:12.5px;margin-top:2px">${autorTxt(E, p)} · ${esc(sec(p.s).nombre)} · ${p.may === 'simple' ? 'mayoría simple' : p.may === 'absoluta' ? 'mayoría absoluta' : 'mayoría de dos tercios'}</div></div>
+        <div style="min-width:0"><div class="fila" style="gap:6px"><span>${sec(p.s).icono}</span><b style="font-size:15px">${esc(p.t)}</b></div><div class="tenue" style="font-size:12.5px;margin-top:2px">${autorTxt(E, p)} · ${esc(sec(p.s).nombre)} · ${Comp.mayoriaTxt(p.may)}${p.region ? ' · ' + esc(Comp.ccaa(p.region)) : ''}</div></div>
         <span class="etq ${Comp.tonoEtapa(p.etapa)}">${Comp.etapa(p.etapa)}</span></div>
         <div style="margin-top:10px">${tramite(p)}</div>
         ${pr ? `<div class="fila" style="margin-top:8px;font-size:12px;gap:10px"><span class="tenue">Proyección</span><span class="bien">${pr.si} sí</span><span class="mal">${pr.no} no</span><span class="tenue">${pr.abs} abst.</span><span class="${pr.dist >= 0 ? 'bien' : 'mal'}" style="margin-left:auto">${pr.dist >= 0 ? 'Margen +' + pr.dist : 'Faltan ' + Math.abs(pr.dist)}</span></div>` : ''}</div>`;
@@ -50,8 +55,8 @@ window.EUROPA = window.EUROPA || {};
 
     proponer(E) {
       const J = E.jugador;
-      const lista = D().leyes.filter(l => C.Parlamento.reqOK(E, l)).map(l => ({ l, d: U.distIdeo(J, l) })).sort((a, b) => a.d - b.d);
-      const abiertos = C.Parlamento.abiertos(E).map(p => p.tpl);
+      const lista = D().leyes.filter(l => !l.manual && !l.rdlSolo).map(l => ({ l, d: U.distIdeo(J, l) })).sort((a, b) => a.d - b.d);
+      const abiertos = C.Congreso.abiertos(E).map(p => p.tpl);
       const puede = C.Acciones.puede('proponer_ley', {});
       return `<p class="tenue" style="margin-top:0">${puede === true ? 'Elige una iniciativa para registrar (cuesta 2 puntos de agenda). Se adapta algo a tu ideología.' : '<span class="mal">' + esc(puede) + '</span>'}</p>
         <div class="sel-grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">${lista.map(({ l, d }) => `<div class="tarjeta"><div class="fila" style="gap:6px"><span>${sec(l.s).icono}</span><b>${esc(l.t)}</b></div><div class="tenue" style="font-size:12.5px;margin:6px 0">${esc(l.d)}</div>
@@ -64,18 +69,19 @@ window.EUROPA = window.EUROPA || {};
       const E = C.E, p = E.proyectos[id]; if (!p) return;
       const P = E.paises[E.jugador.pais];
       const activo = ACTIVAS.includes(p.etapa);
-      const pr = activo ? C.Parlamento.proyectar(E, p) : null;
+      const pr = activo ? C.Congreso.proyectar(E, p) : null;
       const filas = P.partidos.filter(k => (P.escanos[k] || 0) > 0).sort((a, b) => P.escanos[b] - P.escanos[a]).map(k => {
-        const ps = C.Parlamento.postura(E, k, p), top = ps.factores.slice().sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0];
+        const ps = C.Congreso.postura(E, k, p), top = ps.factores.slice().sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0];
         const det = ps.factores.map(f => `<div class="tt-f"><span>${esc(f[0])}</span><b class="${f[1] >= 0 ? 'bien' : 'mal'}">${U.signo(f[1], 2)}</b></div>`).join('');
         return `<tr><td>${Comp.partido(E, k)}</td><td class="num">${P.escanos[k]}</td><td><span class="etq ${VTC[ps.voto]}"${UI.tt(det)}>${VT[ps.voto]}</span></td><td class="tenue" style="font-size:12px">${esc(top ? top[0] : '')}</td>
           <td style="text-align:right">${activo ? UI.botonAccion('cabildear_ley', { proy: p.id, pid: k, lado: 'si' }, '👍', 'chico') + ' ' + UI.botonAccion('cabildear_ley', { proy: p.id, pid: k, lado: 'no' }, '👎', 'chico') : ''}</td></tr>`;
       }).join('');
       const v = p.votacion ? E.votaciones.find(x => x.id === p.votacion) : null;
       const cuerpo = `<div class="tenue" style="font-size:12.5px">${autorTxt(E, p)} · ${esc(sec(p.s).nombre)}</div><p style="margin:6px 0 10px;font-size:14px">${esc(p.d || '')}</p>
-        <div class="fila" style="gap:6px;margin-bottom:10px"><span class="etq">Posición: ${Comp.ideoTxt(p)}</span><span class="etq">Apoyo ciudadano ${p.pop} %</span>${p.costo ? `<span class="etq ${p.costo > 0 ? 'rojo' : 'verde'}">${p.costo > 0 ? 'Coste' : 'Ingreso'} ${U.d1(Math.abs(p.costo))} % PIB</span>` : ''}<span class="etq oro">${p.may === 'simple' ? 'Mayoría simple' : p.may === 'absoluta' ? 'Mayoría absoluta' : 'Dos tercios'}</span></div>
+        <div class="fila" style="gap:6px;margin-bottom:10px"><span class="etq">Posición: ${Comp.ideoTxt(p)}, ${Comp.terTxt(p.ter || 0)}</span><span class="etq">Apoyo ciudadano ${p.pop} %</span>${p.costo ? `<span class="etq ${p.costo > 0 ? 'rojo' : 'verde'}">${p.costo > 0 ? 'Coste' : 'Ingreso'} ${U.d1(Math.abs(p.costo))} % PIB</span>` : ''}<span class="etq oro">${Comp.mayoriaTxt(p.may)}</span></div>
         ${tramite(p)}
         ${pr ? `<div style="margin:14px 0 4px">${G.apilada([{ etq: 'A favor', v: pr.si, color: 'var(--si)' }, { etq: 'Abstención', v: pr.abs, color: 'var(--abs)' }, { etq: 'En contra', v: pr.no, color: 'var(--no)' }], { total: pr.total, mayoria: pr.need, alto: 18 })}<div class="tenue" style="font-size:12px;margin-top:4px">Proyección: ${pr.si} a favor, ${pr.no} en contra · se necesitan ${pr.need}. ${pr.dist >= 0 ? '<b class="bien">Margen de ' + pr.dist + '</b>' : '<b class="mal">Faltan ' + Math.abs(pr.dist) + '</b>'}</div></div>` : ''}
+        ${activo && !p.rdl ? (() => { const sn = C.Congreso.votoSenado(E, p); return `<div class="nota" style="margin-top:10px">🏛 <b>Senado</b> (proyección): ${sn.si} sí · ${sn.no} no · ${sn.abs} abst. ${sn.veto ? '<b class="mal">· Veto probable (mayoría absoluta en contra)</b>' : sn.no > sn.si ? '· Podría introducir enmiendas' : '· Sin veto previsto'}</div>`; })() : ''}
         <h3 style="margin:14px 0 6px;font-size:12px;letter-spacing:.12em;color:var(--tenue);text-transform:uppercase">Posición de los grupos</h3>
         <table class="tabla"><thead><tr><th>Grupo</th><th class="num">Esc.</th><th>Postura</th><th>Factor principal</th><th></th></tr></thead><tbody>${filas}</tbody></table>
         <h3 style="margin:14px 0 6px;font-size:12px;letter-spacing:.12em;color:var(--tenue);text-transform:uppercase">Historial</h3>
@@ -89,11 +95,11 @@ window.EUROPA = window.EUROPA || {};
       const E = C.E, p = E.proyectos[id];
       if (!p) { E.parl.pendienteVoto = E.parl.pendienteVoto.filter(x => x !== id); return C.App.revisarPendientes(); }
       const J = E.jugador, P = E.paises[J.pais];
-      const linea = C.Parlamento.postura(E, J.partido, p).voto;
-      const pr = C.Parlamento.proyectar(E, p);
-      const filas = P.partidos.filter(k => (P.escanos[k] || 0) > 0).sort((a, b) => P.escanos[b] - P.escanos[a]).map(k => { const ps = C.Parlamento.postura(E, k, p); return `<tr><td>${Comp.partido(E, k)}</td><td class="num">${P.escanos[k]}</td><td><span class="etq ${VTC[ps.voto]}">${VT[ps.voto]}</span></td></tr>`; }).join('');
-      const cuerpo = `<div class="tenue" style="font-size:12.5px">${autorTxt(E, p)} · ${esc(sec(p.s).nombre)} · ${p.may === 'simple' ? 'mayoría simple' : p.may === 'absoluta' ? 'mayoría absoluta' : 'dos tercios'}</div><p style="margin:6px 0 10px;font-size:14.5px">${esc(p.d || '')}</p>
-        <div class="fila" style="gap:6px;margin-bottom:10px"><span class="etq">Posición: ${Comp.ideoTxt(p)}</span><span class="etq">Apoyo ciudadano ${p.pop} %</span><span class="etq">Tu perfil: ${U.d1((1 - U.distIdeo(J, p)) * 100)} % de afinidad</span></div>
+      const linea = C.Congreso.postura(E, J.partido, p).voto;
+      const pr = C.Congreso.proyectar(E, p);
+      const filas = P.partidos.filter(k => (P.escanos[k] || 0) > 0).sort((a, b) => P.escanos[b] - P.escanos[a]).map(k => { const ps = C.Congreso.postura(E, k, p); return `<tr><td>${Comp.partido(E, k)}</td><td class="num">${P.escanos[k]}</td><td><span class="etq ${VTC[ps.voto]}">${VT[ps.voto]}</span></td></tr>`; }).join('');
+      const cuerpo = `<div class="tenue" style="font-size:12.5px">${autorTxt(E, p)} · ${esc(sec(p.s).nombre)} · ${Comp.mayoriaTxt(p.may)}</div><p style="margin:6px 0 10px;font-size:14.5px">${esc(p.d || '')}</p>
+        <div class="fila" style="gap:6px;margin-bottom:10px"><span class="etq">Posición: ${Comp.ideoTxt(p)}, ${Comp.terTxt(p.ter || 0)}</span><span class="etq">Apoyo ciudadano ${p.pop} %</span><span class="etq">Tu perfil: ${U.d1((1 - U.distIdeo(J, p)) * 100)} % de afinidad</span></div>
         ${G.apilada([{ etq: 'A favor', v: pr.si, color: 'var(--si)' }, { etq: 'Abstención', v: pr.abs, color: 'var(--abs)' }, { etq: 'En contra', v: pr.no, color: 'var(--no)' }], { total: pr.total, mayoria: pr.need, alto: 18 })}
         <div class="tenue" style="font-size:12px;margin:4px 0 10px">Proyección: ${pr.si} sí · ${pr.no} no · mayoría necesaria ${pr.need}. ${pr.dist >= 0 ? '<b class="bien">Margen +' + pr.dist + '</b>' : '<b class="mal">Faltan ' + Math.abs(pr.dist) + '</b>'}</div>
         <table class="tabla"><tbody>${filas}</tbody></table>
@@ -103,7 +109,7 @@ window.EUROPA = window.EUROPA || {};
       m.cuerpo.addEventListener('click', e => {
         const b = e.target.closest('[data-v]'); if (!b) return;
         const ix = E.parl.pendienteVoto.indexOf(id); if (ix >= 0) E.parl.pendienteVoto.splice(ix, 1);
-        const v = C.Parlamento.resolver(E, p, b.dataset.v);
+        const v = C.Congreso.resolver(E, p, b.dataset.v);
         m.cerrar(); C.App.refrescar(); L.verVotacion(v.id, true);
       });
     },
@@ -122,4 +128,4 @@ window.EUROPA = window.EUROPA || {};
       UI.modal({ titulo: p ? p.t : 'Votación', icono: v.ok ? '✅' : '❌', cuerpo, clase: 'medio', alCerrar: () => { if (alCerrarSigue) C.App.revisarPendientes(); } });
     }
   };
-})(window.EUROPA);
+})(window.ESP);

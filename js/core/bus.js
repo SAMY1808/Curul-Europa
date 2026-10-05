@@ -1,5 +1,5 @@
 /* Bus de eventos: los sistemas publican, la interfaz escucha. */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
   const oyentes = {};
   C.Bus = {
@@ -10,4 +10,4 @@ window.EUROPA = window.EUROPA || {};
       (oyentes['*'] || []).forEach(f => { try { f(ev, datos); } catch (e) { console.error(e); } });
     }
   };
-})(window.EUROPA);
+})(window.ESP);

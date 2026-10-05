@@ -1,10 +1,10 @@
 /* Partidas guardadas: guardar, cargar, exportar, importar y borrar. */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
   const U = C.U, UI = C.UI, esc = U.esc;
   C.Pantallas = C.Pantallas || {};
 
-  const fila = (p, actual) => `<div class="it" style="gap:12px"><span style="font-size:22px">${p.bandera || '🗳'}</span><div class="cuerpo"><b>${esc(p.nombre || p.jugador)} ${actual ? '<span class="etq oro">Actual</span>' : ''}</b><span>${esc(p.jugador)} · ${esc(p.cargo)} · ${esc(p.fecha)} · guardada ${new Date(p.guardado).toLocaleString('es-ES')}</span></div>
+  const fila = (p, actual) => `<div class="it" style="gap:12px"><span style="font-size:22px">${p.bandera || '🇪🇸'}</span><div class="cuerpo"><b>${esc(p.nombre || p.jugador)} ${actual ? '<span class="etq oro">Actual</span>' : ''}</b><span>${esc(p.jugador)} · ${esc(p.cargo)} · ${esc(p.fecha)} · guardada ${new Date(p.guardado).toLocaleString('es-ES')}</span></div>
     <button class="btn chico" data-cargar="${p.id}">Cargar</button><button class="btn chico peligro" data-borrar="${p.id}">🗑</button></div>`;
 
   const P_ = C.Pantallas.partidas = {
@@ -32,4 +32,4 @@ window.EUROPA = window.EUROPA || {};
       UI.$$('[data-borrar]', m.el).forEach(b => b.onclick = () => { if (confirm('¿Borrar esta partida?')) C.Guardado.borrar(b.dataset.borrar).then(() => { m.cerrar(); C.Pantallas.partidas.modalCargar(); }); });
     }
   };
-})(window.EUROPA);
+})(window.ESP);

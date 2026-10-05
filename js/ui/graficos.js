@@ -1,6 +1,6 @@
 /* Gráficos SVG propios (sin dependencias): líneas, barras, donas, medidores, radar, apiladas.
    Todos devuelven cadenas SVG con zonas de hover (data-tt) que usa el tooltip global. */
-window.EUROPA = window.EUROPA || {};
+window.ESP = window.ESP || {};
 (function (C) {
   const U = C.U, esc = U.esc;
   const tt = C.UI.tt;
@@ -145,4 +145,4 @@ window.EUROPA = window.EUROPA || {};
     }
   };
   C.Graf = G;
-})(window.EUROPA);
+})(window.ESP);

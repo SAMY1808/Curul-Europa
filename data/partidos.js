@@ -3,13 +3,12 @@
    Arquetipos: izq (izquierda radical) · soc (socialdemocracia) · ver (verdes) · lib (liberales) · cen (centro nuevo)
    · dem (democristianos/conservadores) · agr (agrarios) · reg (regionalistas) · nac (nacional-conservadores)
    · pop (populistas) · ext (extrema derecha)                                                                  */
-window.EUROPA = window.EUROPA || {};
-EUROPA.DATA = EUROPA.DATA || {};
-EUROPA.DATA.partidos = {
+window.ESP = window.ESP || {};
+ESP.DATA = ESP.DATA || {};
+ESP.DATA.partidos = {
   DE: [['Unión Social-Demócrata','USD','soc',20],['Unión Cristiana del Pueblo','UCP','dem',28],['Frente Soberanista Alemán','FSA','ext',19],['Futuro Verde','FV','ver',11],['Liberales de Centro','LDC','lib',5],['Izquierda Unida Alemana','IUA','izq',7],['Alianza Justicia Social','AJS','pop',5],['Comunidades Libres de Baviera','CLB','reg',3]],
   FR: [['Nuevo Impulso Republicano','NIR','cen',20],['Unión Patriótica Francesa','UPF','ext',29],['Derecha Republicana Unida','DRU','dem',9],['Partido Socialista Renovado','PSR','soc',12],['Francia en Pie','FEP','izq',14],['Ecología Ciudadana','ECI','ver',6],['Acción Soberanista','ASO','nac',5],['Movimiento de las Regiones','MDR','reg',2]],
   IT: [['Unione Democratica Italiana','UDI','soc',22],['Patria e Tricolore','PET','nac',29],['Unione Federale Popolare','UFP','pop',9],['Movimento Civico Nazionale','MCN','pop',12],['Centro Liberale Italiano','CLI','dem',8],['Sinistra e Ambiente','SEA','izq',6],['Libertà e Riforme','LER','lib',6],['Autonomie del Nord','ADN','reg',3]],
-  ES: [['Alianza Socialdemócrata','ASD','soc',27],['Unión Popular Cristiana','UPC','dem',31],['Vanguardia Patriota','VAP','ext',13],['Plataforma Plural de Izquierdas','PPI','izq',9],['Centro Liberal Democrático','CLD','lib',4],['Verdes del Sur','VDS','ver',3],['Compromís Territorial','CTE','reg',3],['Partido Nacionalista del Norte','PNN','reg',3]],
   PL: [['Alianza Cívica Polaca','ACP','lib',31],['Patria y Tradición','PYT','nac',29],['Liga de la Libertad','LLB','ext',14],['Unión Campesina Polaca','UCP','agr',8],['Izquierda Democrática Polaca','IDP','soc',7],['Partido Obrero Unido','POU','izq',4],['Movimiento Nacional Polaco','MNP','ext',5]],
   RO: [['Unión Social Democrática Rumana','USDR','soc',22],['Alianza Liberal Rumana','ALR','dem',17],['Frente por la Patria Rumana','FPR','ext',24],['Renovar Rumanía','RRU','lib',11],['Foro Magiar de Transilvania','FMT','reg',6],['Los Verdes de Rumanía','VRU','ver',3],['Movimiento Soberanista','MSO','pop',8],['Partido Pro Futuro','PPF','cen',5]],
   NL: [['Libertad y Patria','LYP','ext',22],['Izquierda Verde-Laborista','IVL','soc',20],['Demócratas Liberales','DEL','lib',17],['Centro Cristiano Neerlandés','CCN','dem',14],['Nuevo Contrato Social','NCS','cen',8],['Partido Animalista y Verde','PAV','ver',5],['Socialistas Unidos','SUN','izq',5],['Liga Campesina','LCA','agr',4],['Unión Cristiana Reformada','UCR','dem',3]],
@@ -33,21 +32,11 @@ EUROPA.DATA.partidos = {
   CY: [['Congreso Democrático Chipriota','CDC','dem',28],['Frente Progresista Obrero','FPO','izq',22],['Alianza Democrática Cipriota','ADC','cen',12],['Bloque Nacional Chipriota','BNC','ext',16],['Movimiento Socialista Cipriota','MSC','soc',9],['Ciudadanos por el Cambio','CCA','pop',6],['Movimiento Ecologista','MEC','ver',4],['Voz Independiente','VOI','pop',3]],
   LU: [['Unión Social Cristiana','USC','dem',29],['Partido Democrático Liberal','PDL','lib',19],['Partido Obrero Socialista','POS','soc',18],['Los Verdes de Luxemburgo','VLU','ver',9],['Reforma Democrática Pensionista','RDP','nac',11],['Piratas del Gran Ducado','PGD','pop',7],['La Izquierda Luxemburguesa','LIL','izq',5]],
   MT: [['Movimiento Laborista de Malta','MLM','soc',52],['Unión Nacional Maltesa','UNM','dem',44],['Alternativa Verde de Malta','AVM','ver',2],['Movimiento Patriótico','MPA','ext',2]],
-  UK: [['Laboristas Progresistas','LAP','soc',29],['Unionistas Conservadores','UNC','dem',20],['Frente Británico Soberano','FBS','ext',27],['Liberales Unidos','LIU','lib',12],['Verdes de Inglaterra y Gales','VIG','ver',7],['Alianza Nacional Escocesa','ANE','reg',3],['Voz de Gales','VGA','reg',1],['Alianza de los Trabajadores','ADT','izq',1]],
-  TR: [['Partido del Progreso y la Nación','PPN','nac',37],['Movimiento Republicano Laico','MRL','soc',28],['Alianza Democrática de los Pueblos','ADP','izq',9],['Frente Nacionalista Turco','FNT','ext',9],['Partido del Buen Futuro','PBF','cen',7],['Partido de la Nueva Fe','PNF','nac',5],['Partido del Triunfo Nacional','PTN','ext',5]],
-  UA: [['Pueblo Unido','PUN','cen',33],['Convergencia Europea','CEU','lib',18],['Tierra Patria','TPA','dem',12],['Plataforma Cívica','PCV','pop',8],['Voces Libres','VLI','lib',9],['Batallón de la Nación','BDN','nac',10],['Partido Social Unión','PSU','soc',5],['Verdes de Ucrania','VEU','ver',2]],
-  RS: [['Unión Progresista Serbia','UPS','nac',46],['Socialistas de Serbia','SDS','soc',10],['Serbia Libre','SLI','lib',17],['Movimiento Patriota','MPA','ext',7],['Nuevo Partido Demócrata','NPD','dem',8],['Alianza de Magiares de Voivodina','AMV','reg',3],['Marcha Verde','MAV','ver',4],['Partido de la Acción Común','PAC','izq',5]],
-  AL: [['Movimiento Renovado Albanés','MRA','soc',48],['Alianza Democrática Albanesa','ADA','dem',32],['Movimiento Socialista para la Integración','MSI','soc',6],['Alianza Nación Albanesa','ANA','ext',5],['Partido Verde Albanés','PVA','ver',2],['Fuerza Joven','FJO','lib',4],['Demócratas Liberales','DLI','lib',3]],
-  BA: [['Acción Democrática Bosnia','ADB','nac',18],['Alianza Socialdemócrata Independiente','ASIN','nac',15],['Comunidad Croata Democrática','CCD','dem',14],['Partido Socialdemócrata de Bosnia','PSB','soc',14],['Nuestro Partido','NPA','lib',9],['Frente Democrático Cívico','FDC','cen',11],['Partido por un Futuro Mejor','PFM','pop',9],['Alianza Verde de Bosnia','AVB','ver',3],['Movimiento Obrero Unido','MOU','izq',4]],
-  MK: [['Organización Patriótica Macedonia','OPM','nac',44],['Unión Social Demócrata del Vardar','USD','soc',22],['Unión por la Integración','UPI','reg',12],['Alianza por los Albaneses','APA','reg',9],['Izquierda Unitaria','IZU','izq',7],['Movimiento Europeo','MEU','cen',6]],
-  ME: [['Europa Ya','EYA','cen',26],['Partido Socialista Democrático Montenegrino','PSDM','soc',22],['Frente Patriótico Montenegrino','FPM','nac',20],['Demócratas de Montenegro','DEM','dem',10],['Acción Reformista','ARE','lib',5],['Partido Bosnio','PBO','reg',6],['Albaneses Unidos','ALU','reg',3],['Verdes Montenegrinos','VMO','ver',2]],
-  MD: [['Compromiso Moldavo','COM','lib',44],['Bloque Rojo Moldavo','BRM','izq',22],['Alternativa Patriótica','ALP','pop',14],['Partido Nuestro Pueblo','PNP','pop',8],['Democracia en Casa','DEC','nac',6],['Partido Nuestra Casa','PNC','pop',3],['Verdes Moldavos','VEM','ver',3]],
-  GE: [['Georgia Soberana','GSO','nac',54],['Coalición por el Cambio','CPC','lib',18],['Movimiento Nacional Georgiano','MNG','dem',12],['Georgia Unida','GUN','dem',9],['Lelo Social','LSO','soc',4],['Patriotas de Georgia','PDG','ext',3]]
 };
 
 /* Color y posición ideológica base por arquetipo (eco: −100 izquierda… +100 derecha · soc: −100 progresista… +100 conservador
    · eu: −100 euroescéptico… +100 europeísta), y grupo del Parlamento Europeo de afiliación. */
-EUROPA.DATA.arquetipos = {
+ESP.DATA.arquetipos = {
   izq: { nombre: 'Izquierda radical',   color: '#C0392B', eco: -78, soc: -50, eu: -5,  grupo: 'IZE' },
   soc: { nombre: 'Socialdemocracia',    color: '#E0533F', eco: -42, soc: -32, eu: 48,  grupo: 'SPE' },
   ver: { nombre: 'Verdes',              color: '#3FA85C', eco: -35, soc: -65, eu: 52,  grupo: 'VEA' },

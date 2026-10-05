@@ -4,9 +4,9 @@
         'unan' (unanimidad en el Consejo; veto de cualquier Estado) · cumbre: lo decide el Consejo Europeo por consenso
    afecta: {interés sectorial → +1 beneficia / −1 perjudica} · ef: efectos al aprobarse en los Estados miembros
    cand: afecta a un candidato (se llena en ejecución)                                                         */
-window.EUROPA = window.EUROPA || {};
-EUROPA.DATA = EUROPA.DATA || {};
-EUROPA.DATA.expedientes = [
+window.ESP = window.ESP || {};
+ESP.DATA = ESP.DATA || {};
+ESP.DATA.expedientes = [
   { id: 'clima2040', t: 'Objetivo climático del 90 % de reducción de emisiones para 2040', tipo: 'reglamento', s: 'amb', eco: -30, soc: -55, eu: 40, may: 'QMV', afecta: { ind: -0.4, agr: -0.5, ene: -0.3, nuc: 0.2 }, ef: { crec: -0.1, infl: 0.1 }, d: 'Fija la senda de descarbonización con créditos internacionales limitados.' },
   { id: 'pacto_migracion', t: 'Pacto de migración y asilo: reparto de solidaridad', tipo: 'reglamento', s: 'seg', eco: 5, soc: 30, eu: 25, may: 'QMV', afecta: { mig: 0.9 }, ef: {}, d: 'Reparto obligatorio de solicitantes de asilo o contribución financiera.' },
   { id: 'defensa_comun', t: 'Programa europeo de defensa y compras conjuntas', tipo: 'reglamento', s: 'ext', eco: 15, soc: 20, eu: 40, may: 'QMV', afecta: { def: 0.6, ind: 0.3, neu: -0.7 }, ef: { deficit: 0.2 }, d: 'Fondo de 150 000 M€ en préstamos para industria militar europea.' },
@@ -45,7 +45,7 @@ EUROPA.DATA.expedientes = [
 ];
 
 /* Cumbres por año: meses en que se celebran los Consejos Europeos ordinarios. */
-EUROPA.DATA.cumbresMeses = [3, 6, 10, 12];
+ESP.DATA.cumbresMeses = [3, 6, 10, 12];
 
 /* Candidatos: capítulos (clusters) de negociación. */
-EUROPA.DATA.clusters = ['Fundamentos (Estado de derecho, justicia)', 'Mercado interior', 'Competitividad y crecimiento inclusivo', 'Agenda verde y conectividad', 'Recursos, agricultura y cohesión', 'Relaciones exteriores'];
+ESP.DATA.clusters = ['Fundamentos (Estado de derecho, justicia)', 'Mercado interior', 'Competitividad y crecimiento inclusivo', 'Agenda verde y conectividad', 'Recursos, agricultura y cohesión', 'Relaciones exteriores'];
